@@ -78,6 +78,22 @@ public class Robot extends LoggedRobot {
   @Override
   public void robotPeriodic() {
     CommandScheduler.getInstance().run();
+
+    var shrekEst = visionShrek.getEstimatedRobotPose();
+    shrekEst.ifPresent(
+      est -> {
+var estStdDevs = visionShrek.getEstimationStdDevs();
+m_robotContainer.getSwerve().addVisionMeasurement(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
+      }
+    );
+
+    var donkeyEst = visionDonkey.getEstimatedRobotPose();
+    donkeyEst.ifPresent(
+      est -> {
+var estStdDevs = visionDonkey.getEstimationStdDevs();
+m_robotContainer.getSwerve().addVisionMeasurement(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
+      }
+    );
   }
 
   @Override
