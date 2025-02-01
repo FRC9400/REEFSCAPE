@@ -102,8 +102,8 @@ public class Swerve extends SubsystemBase{
     
 
     public Swerve() {
-        var stateStdDevs = VecBuilder.fill(0,0,0);//placeholders
-        var visionStdDevs = VecBuilder.fill(0,0,0);
+        var stateStdDevs = VecBuilder.fill(0.1,0.1,0.1);//placeholders
+        var visionStdDevs = VecBuilder.fill(1,1,1);
 
         poseEstimator = new SwerveDrivePoseEstimator(kinematics, getRotation2d(), getSwerveModulePositions(), new Pose2d(), stateStdDevs, visionStdDevs);
 

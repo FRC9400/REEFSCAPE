@@ -17,6 +17,6 @@ public class visionConstants{
     public static final Transform3d[] kRobotToCam = {new Transform3d(new Translation3d(0,0,0), new Rotation3d(0,0,0)),
         new Transform3d(new Translation3d(0,0,0), new Rotation3d(0,0,0))};//placeholders
 
-    public static final Matrix<N3,N1> kSingleTagStdDevs = VecBuilder.fill(0,0,0);//placeholder
-    public static final Matrix<N3,N1> kMultiTagStdDevs = VecBuilder.fill(0,0,0);//more placeholder
+    public static final Matrix<N3,N1> kSingleTagStdDevs = VecBuilder.fill(0.9,0.9,0.9);//placeholder
+    public static final Matrix<N3,N1> kMultiTagStdDevs = VecBuilder.fill(0.6,0.6,0.6);//more placeholder
 }

@@ -28,7 +28,10 @@ public class Vision {
 
     public Optional<EstimatedRobotPose> getEstimatedRobotPose(){
         Optional<EstimatedRobotPose> poseEst = Optional.empty();
-
+        for(var change : camera.getAllUnreadResults()){
+            poseEst = poseEstimator.update(change);
+            updateStdDevs(poseEst, change.getTargets());
+        }
         return poseEst;
     }
 
