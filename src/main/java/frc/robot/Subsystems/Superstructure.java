@@ -76,6 +76,9 @@ public class Superstructure extends SubsystemBase{
         s_amp.Loop();
         Logger.recordOutput("SuperstructureState", this.systemState);
         Logger.recordOutput("State start time", stateStartTime);
+        Logger.recordOutput("SwerveOdometry", m_odometry.getPoseMeters());
+        Logger.recordOutput("OculusPosituion", questNav.getPose());
+        Logger.recordOutput("OculusQuaternion", questNav.getQuaternion());
         switch(systemState){
             case IDLE:
                 s_indexer.requestIdle();

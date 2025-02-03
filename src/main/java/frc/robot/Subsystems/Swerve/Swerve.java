@@ -63,8 +63,7 @@ public class Swerve extends SubsystemBase{
     private final boolean fieldRelatve;
     private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(kinematicsConstants.FL, kinematicsConstants.FR, kinematicsConstants.BL,
         kinematicsConstants.BR);
-    private final SwerveDriveOdometry odometry = new SwerveDriveOdometry(kinematics, getRotation2d(),
-        getSwerveModulePositions()); 
+    private final SwerveDriveOdometry odometry = new SwerveDriveOdometry( kinematics, getRotation2d(), getSwerveModulePositions()); 
     SwerveModuleState setpointModuleStates[] = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
             0,
             0,
@@ -94,8 +93,12 @@ public class Swerve extends SubsystemBase{
              this)
         );
     
+    private QuestNav questnav = new QuestNav();
+    //private PIDController anglePIDController = new PIDController(1.0/60.0, 0, 0);
 
     public Swerve() {
+
+        //anglePIDController.enableContinuousInput(-180, 180);
 
         moduleIOs[0] = new ModuleIOTalonFX(canIDConstants.driveMotor[0], canIDConstants.steerMotor[0], canIDConstants.CANcoder[0],swerveConstants.moduleConstants.CANcoderOffsets[0],
         swerveConstants.moduleConstants.driveMotorInverts[0], swerveConstants.moduleConstants.steerMotorInverts[0], swerveConstants.moduleConstants.CANcoderInverts[0]);
@@ -161,6 +164,9 @@ public class Swerve extends SubsystemBase{
         //logModuleStates("SwerveModuleStates/optimizedSetpointStates", getOptimizedSetPointStates());
         logModuleStates("SwerveModuleStates/MeasuredStates", getMeasuredStates());
         Logger.recordOutput("Odometry/PoseRaw", poseRaw);
+        Logger.recordOutput("OculusPosituion", questNav.getPose());
+        m_robotDrive.cleanupQuestNavMessages();
+
 
     }
 
@@ -222,19 +228,22 @@ public class Swerve extends SubsystemBase{
     }
 
     public void updateOdometry(){
-        var gyroYaw = new Rotation2d(gyroInputs.positionRad);
+        var gyroYaw = new Rotation2d(gyroInputs.positionRad); 
         lastGyroYaw = gyroYaw;
-        poseRaw = odometry.update(
+        /**poseRaw = odometry.update(
                 getRotation2d(),
-                getSwerveModulePositions());
+                getSwerveModulePositions()); */
+        poseRaw = questNav.getPose();
     }
 
     public Pose2d getPoseRaw(){
-        return odometry.getPoseMeters();
+        //return odometry.getPoseMeters();
+        return questNav.getPose();
     }
 
     public void resetPose(Pose2d pose){
         odometry.resetPosition(getRotation2d(), getSwerveModulePositions(), pose);
+        questNav.zeroPosition();
         poseRaw = pose;
     }
 
@@ -360,6 +369,7 @@ public class Swerve extends SubsystemBase{
         }
         Logger.recordOutput(key, dataArray.stream().mapToDouble(Double::doubleValue).toArray());
     }
+    
 
 
  
