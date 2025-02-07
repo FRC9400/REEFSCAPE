@@ -44,6 +44,7 @@ import frc.commons.LoggedTunableNumber;
 import frc.robot.Constants.canIDConstants;
 import frc.robot.Constants.swerveConstants;
 import frc.robot.Constants.swerveConstants.kinematicsConstants;
+import frc.robot.Subsystems.QuestNav;
 import frc.robot.autons.AutoConstants;
 
 
@@ -164,8 +165,8 @@ public class Swerve extends SubsystemBase{
         //logModuleStates("SwerveModuleStates/optimizedSetpointStates", getOptimizedSetPointStates());
         logModuleStates("SwerveModuleStates/MeasuredStates", getMeasuredStates());
         Logger.recordOutput("Odometry/PoseRaw", poseRaw);
-        Logger.recordOutput("OculusPosituion", questNav.getPose());
-        m_robotDrive.cleanupQuestNavMessages();
+        Logger.recordOutput("OculusPosituion", questnav.getPose());
+        questnav.cleanUpQuestNavMessages();
 
 
     }
@@ -233,17 +234,17 @@ public class Swerve extends SubsystemBase{
         /**poseRaw = odometry.update(
                 getRotation2d(),
                 getSwerveModulePositions()); */
-        poseRaw = questNav.getPose();
+        poseRaw = questnav.getPose();
     }
 
     public Pose2d getPoseRaw(){
         //return odometry.getPoseMeters();
-        return questNav.getPose();
+        return questnav.getPose();
     }
 
     public void resetPose(Pose2d pose){
         odometry.resetPosition(getRotation2d(), getSwerveModulePositions(), pose);
-        questNav.zeroPosition();
+        questnav.zeroPosition();
         poseRaw = pose;
     }
 
