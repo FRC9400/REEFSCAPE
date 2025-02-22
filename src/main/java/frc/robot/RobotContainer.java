@@ -33,7 +33,6 @@ public class RobotContainer {
     private final Swerve swerve = new Swerve();
   
     public RobotContainer() {
-    swerve.zeroWheels();
     swerve.zeroGyro();
     swerve.setDefaultCommand(
         new TeleopSwerve(
@@ -83,6 +82,9 @@ public class RobotContainer {
 
         operator.x()
             .onTrue(new InstantCommand(() -> superstructure.requestIntake()));
+        
+        operator.y()
+            .onTrue(new InstantCommand(() -> superstructure.requestIntake2()));
     }
 
 
