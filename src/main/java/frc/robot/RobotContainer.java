@@ -57,7 +57,7 @@ public class RobotContainer {
     
 
     driver.leftBumper()
-        .whileTrue(new RunCommand(() -> endEffector.requestVoltage(0)));
+        .whileTrue(new RunCommand(() -> endEffector.requestVoltage(3)));
       
     driver.rightBumper()
         .onTrue(new RunCommand(() -> leds.setColor()));

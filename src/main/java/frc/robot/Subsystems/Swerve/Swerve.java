@@ -61,7 +61,7 @@ public class Swerve extends SubsystemBase{
     private final boolean fieldRelatve;
     private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(kinematicsConstants.FL, kinematicsConstants.FR, kinematicsConstants.BL,
         kinematicsConstants.BR);
-    OdometryThread m_OdometryThread = new OdometryThread();
+    OdometryThread m_OdometryThread;
     BaseStatusSignal[] m_allSignals;
 
     // from swervestate class
@@ -69,7 +69,7 @@ public class Swerve extends SubsystemBase{
         /** The current velocity of the robot */
     public ChassisSpeeds Speeds = new ChassisSpeeds();
         /** The current module states */
-    public SwerveModuleState[] currentModuleStates = new SwerveModuleState[4];
+    public SwerveModuleState[] currentModuleStates;
         /** The target module states */
     public SwerveModuleState[] setpointModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
         0,
@@ -77,14 +77,13 @@ public class Swerve extends SubsystemBase{
         0,
         new Rotation2d()));
         /** The current module positions */
-    public SwerveModulePosition[] currentModulePositions = new SwerveModulePosition[4];
+    public SwerveModulePosition[] currentModulePositions;
     public Rotation2d heading= new Rotation2d();
     public int SuccessfulDaqs;
         /** Number of failed data acquisitions */
     public int FailedDaqs;
     SwerveModuleState[] desiredModuleStates = new SwerveModuleState[4];
-    private final SwerveDriveOdometry odometry = new SwerveDriveOdometry(kinematics, pigeon.getRotation2d(),
-        currentModulePositions); 
+    private final SwerveDriveOdometry odometry;
 
 
     private final SysIdRoutine driveRoutine = new SysIdRoutine(new SysIdRoutine.Config(
@@ -184,10 +183,6 @@ public class Swerve extends SubsystemBase{
     
 }
 public Swerve() {
-       
-    m_OdometryThread = new OdometryThread();
-    m_allSignals = new BaseStatusSignal[18];
-
     Modules[0] = new ModuleIOTalonFX(canIDConstants.driveMotor[0], canIDConstants.steerMotor[0], canIDConstants.CANcoder[0],swerveConstants.moduleConstants.CANcoderOffsets[0],
     swerveConstants.moduleConstants.driveMotorInverts[0], swerveConstants.moduleConstants.steerMotorInverts[0], swerveConstants.moduleConstants.CANcoderInverts[0]);
 
@@ -199,17 +194,23 @@ public Swerve() {
 
     Modules[3] = new ModuleIOTalonFX(canIDConstants.driveMotor[3], canIDConstants.steerMotor[3], canIDConstants.CANcoder[3], swerveConstants.moduleConstants.CANcoderOffsets[3],
     swerveConstants.moduleConstants.driveMotorInverts[3], swerveConstants.moduleConstants.steerMotorInverts[3], swerveConstants.moduleConstants.CANcoderInverts[3]);
-
-
+    currentModulePositions = new SwerveModulePosition[4];
+    currentModuleStates = new SwerveModuleState[4];
+    this.fieldRelatve = true;
+    for (int i = 0; i < 4; ++i) {
+        currentModulePositions[i] = Modules[i].getPosition(true);
+        currentModuleStates[i] = Modules[i].getState();
+    }
+    odometry = new SwerveDriveOdometry(kinematics, pigeon.getRotation2d(),
+    currentModulePositions); 
+    m_allSignals = new BaseStatusSignal[18];
+    m_OdometryThread = new OdometryThread();
     for (int i = 0; i < 4; i++) {
         Modules[i].setDriveBrakeMode(true);
         Modules[i].setTurnBrakeMode(false);
     }
 
-    this.fieldRelatve = true;
-    for (int i = 0; i < 4; ++i) {
-        currentModulePositions[i] = Modules[i].getPosition(true);
-    }
+    
 
     RobotConfig config;
     try{
@@ -254,7 +255,7 @@ public void periodic(){
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]SteerStator", Modules[i].getCurrentSignals()[2].getValueAsDouble());
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]AbsoluteAngle", Modules[i].getCurrentSignals()[3].getValueAsDouble());
     }
-    
+    m_OdometryThread.run();
     logModuleStates("SwerveModuleStates/setpointStates", desiredModuleStates);
     logModuleStates("SwerveModuleStates/MeasuredStates", currentModuleStates);
     Logger.recordOutput("OculusPosituion", questNav.getPose());
