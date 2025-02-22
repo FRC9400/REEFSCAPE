@@ -102,10 +102,7 @@ public class Swerve extends SubsystemBase{
     
 
     public Swerve() {
-        var stateStdDevs = VecBuilder.fill(0.1,0.1,0.1);//placeholders
-        var visionStdDevs = VecBuilder.fill(1,1,1);
-
-        poseEstimator = new SwerveDrivePoseEstimator(kinematics, getRotation2d(), getSwerveModulePositions(), new Pose2d(), stateStdDevs, visionStdDevs);
+        poseEstimator = new SwerveDrivePoseEstimator(kinematics, getRotation2d(), getSwerveModulePositions(), new Pose2d(), swerveConstants.kStateStdDevs, swerveConstants.kVisionStdDevs);
 
         moduleIOs[0] = new ModuleIOTalonFX(canIDConstants.driveMotor[0], canIDConstants.steerMotor[0], canIDConstants.CANcoder[0],swerveConstants.moduleConstants.CANcoderOffsets[0],
         swerveConstants.moduleConstants.driveMotorInverts[0], swerveConstants.moduleConstants.steerMotorInverts[0], swerveConstants.moduleConstants.CANcoderInverts[0]);
