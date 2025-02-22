@@ -32,8 +32,7 @@ public class RobotContainer {
 
   
     public RobotContainer() {
-    swerve.zeroWheels();
-    swerve.zeroGyro();
+    swerve.resetGyro(0);
     swerve.setDefaultCommand(
         new TeleopSwerve(
             swerve, 
@@ -54,10 +53,6 @@ public class RobotContainer {
 
     driver.y()
         .onTrue(swerve.steerSysIdCmd());    
-
-    driver.a()
-        .onTrue(new RunCommand(() -> eleavtor.requestMotionMagic(m3.get())).until(() -> eleavtor.inputs.elevatorHeightMeters > m3.get() - 0.05)
-        );
         
     
 
