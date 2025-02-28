@@ -38,6 +38,7 @@ public class Superstructure extends SubsystemBase {
         INTAKE,
         POST_INTAKE,
         INTAKE2,
+        OUTTAKE,
         SCORE_A,
         SCORE_B,
         DEALGAE_A,
@@ -91,6 +92,15 @@ public class Superstructure extends SubsystemBase {
                 s_elevator.requestIdle();
                 s_endeffector.requestIntake(3);
                 if (RobotController.getFPGATime() / 1.056 - stateStartTime > 3){
+                    setState(SuperstructureStates.IDLE);
+                }
+                break;
+            case OUTTAKE:
+                led.requestIntakingLED();
+                s_dealgae.requestIdle();
+                s_elevator.requestIdle();
+                s_endeffector.requestIntake(-4);
+                if (RobotController.getFPGATime() / 1.056 - stateStartTime > 4){
                     setState(SuperstructureStates.IDLE);
                 }
                 break;
@@ -178,6 +188,9 @@ public class Superstructure extends SubsystemBase {
         setState(SuperstructureStates.INTAKE2);
     }
 
+    public void requestOuttake(){
+        setState(SuperstructureStates.OUTTAKE);
+    }
 
     public void requestDealgae(){
         setState(SuperstructureStates.DEALGAE_A);
