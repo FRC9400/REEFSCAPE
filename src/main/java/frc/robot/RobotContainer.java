@@ -33,8 +33,7 @@ public class RobotContainer {
     private final Swerve swerve = new Swerve();
   
     public RobotContainer() {
-    swerve.zeroWheels();
-    swerve.zeroGyro();
+    swerve.resetGyro(0);
     swerve.setDefaultCommand(
         new TeleopSwerve(
             swerve, 
@@ -67,7 +66,7 @@ public class RobotContainer {
             .onTrue(new InstantCommand(() -> superstructure.requestIdle()));
         
         driver.back()
-            .onTrue(new InstantCommand(() -> swerve.zeroGyro())); 
+            .onTrue(new InstantCommand(() -> swerve.resetGyro(0))); 
         
         driver.rightBumper()
             .onTrue(new InstantCommand(() -> superstructure.requestElevatorDown()));

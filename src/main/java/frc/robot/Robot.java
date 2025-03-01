@@ -88,13 +88,14 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void disabledPeriodic() {
+    /* 
     if (DriverStation.getAlliance().isPresent() && !built){
       do_nothing = new InstantCommand();
       tune_x = autos.tune("tuneX");
       tune_y = autos.tune("tuneY");
       tune_theta = autos.tune("tuneTheta");
       built = true;
-    }
+    }*/
 
     }
   
@@ -105,7 +106,7 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void autonomousInit() {
-    
+   /*  
     if(selector.get() == modes.DO_NOTHING){
       m_autonomousCommand = do_nothing;
     }
@@ -124,7 +125,7 @@ public class Robot extends LoggedRobot {
 
     if (m_autonomousCommand != null) {
       m_autonomousCommand.schedule();
-    }
+    }*/
 
   }
 
