@@ -51,6 +51,9 @@ import frc.robot.autons.AutoConstants;
 
 
 public class Swerve extends SubsystemBase{
+    LoggedTunableNumber visionStdDevsX = new LoggedTunableNumber("Vision/visionX", 0.8);
+    LoggedTunableNumber visionStdDevsY = new LoggedTunableNumber("Vision/visionY", 0.8);
+    LoggedTunableNumber visionStdDevsTheta = new LoggedTunableNumber("Vision/visionTheta", 1.1);
 
     private final GyroIO gyroIO = new GyroIOPigeon2(canIDConstants.pigeon);
     private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
@@ -102,7 +105,9 @@ public class Swerve extends SubsystemBase{
     
 
     public Swerve() {
-        poseEstimator = new SwerveDrivePoseEstimator(kinematics, getRotation2d(), getSwerveModulePositions(), new Pose2d(), swerveConstants.kStateStdDevs, swerveConstants.kVisionStdDevs);
+        Matrix<N3,N1> visionDevs = VecBuilder.fill(visionStdDevsX.get(), visionStdDevsY.get(), visionStdDevsTheta.get());
+
+        poseEstimator = new SwerveDrivePoseEstimator(kinematics, getRotation2d(), getSwerveModulePositions(), new Pose2d(), swerveConstants.kStateStdDevs, visionDevs);
 
         moduleIOs[0] = new ModuleIOTalonFX(canIDConstants.driveMotor[0], canIDConstants.steerMotor[0], canIDConstants.CANcoder[0],swerveConstants.moduleConstants.CANcoderOffsets[0],
         swerveConstants.moduleConstants.driveMotorInverts[0], swerveConstants.moduleConstants.steerMotorInverts[0], swerveConstants.moduleConstants.CANcoderInverts[0]);
@@ -170,6 +175,12 @@ public class Swerve extends SubsystemBase{
         logModuleStates("SwerveModuleStates/MeasuredStates", getMeasuredStates());
         Logger.recordOutput("Odometry/PoseRaw", poseRaw);
 
+        if(visionStdDevsX.hasChanged(visionStdDevsX.hashCode())||
+        visionStdDevsY.hasChanged(visionStdDevsY.hashCode())||
+        visionStdDevsTheta.hasChanged(visionStdDevsTheta.hashCode())){            
+            Matrix<N3,N1> visionDevs = VecBuilder.fill(visionStdDevsX.get(), visionStdDevsY.get(), visionStdDevsTheta.get());
+            poseEstimator.setVisionMeasurementStdDevs(visionDevs);
+        }
     }
 
     public void requestDesiredState(double x_speed, double y_speed, double rot_speed, boolean fieldRelative, boolean isOpenLoop){
