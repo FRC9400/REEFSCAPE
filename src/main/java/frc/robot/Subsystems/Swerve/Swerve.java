@@ -29,6 +29,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -48,20 +49,26 @@ import frc.robot.autons.AutoConstants;
  * Gyro added / 
  * Added Odometry Thread class, synchronoulsy wait for signals/
  * Retained logging swervemodulestates and pose /
- * Added Oculus pose
+ * Added Oculus pose 
+ * 
+ * To do
+ * add opi stuff (yikes!)
+ * offset oculus pose
+ * does this even work????
  */
 
 public class Swerve extends SubsystemBase{
+    ProfiledPIDController controller = new ProfiledPIDController(0, 0, 0, null); //create pose constants
+    Pose2d initialPose = new Pose2d();
     private QuestNav questNav = new QuestNav();
     Pigeon2 pigeon = new Pigeon2(canIDConstants.pigeon, "canivore");
     private StatusSignal<Angle> m_heading = pigeon.getYaw();
     private StatusSignal<AngularVelocity> m_angularVelocity = pigeon.getAngularVelocityZDevice();
 
     public final ModuleIOTalonFX[] Modules = new ModuleIOTalonFX[4];
-    private final boolean fieldRelatve;
     private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(kinematicsConstants.FL, kinematicsConstants.FR, kinematicsConstants.BL,
         kinematicsConstants.BR);
-    OdometryThread m_OdometryThread = new OdometryThread();
+    OdometryThread m_OdometryThread;
     BaseStatusSignal[] m_allSignals;
 
     // from swervestate class
@@ -184,10 +191,7 @@ public class Swerve extends SubsystemBase{
     
 }
 public Swerve() {
-       
-    m_OdometryThread = new OdometryThread();
-    m_allSignals = new BaseStatusSignal[18];
-
+    // initialPose = getVisionPose()
     Modules[0] = new ModuleIOTalonFX(canIDConstants.driveMotor[0], canIDConstants.steerMotor[0], canIDConstants.CANcoder[0],swerveConstants.moduleConstants.CANcoderOffsets[0],
     swerveConstants.moduleConstants.driveMotorInverts[0], swerveConstants.moduleConstants.steerMotorInverts[0], swerveConstants.moduleConstants.CANcoderInverts[0]);
 
@@ -206,7 +210,6 @@ public Swerve() {
         Modules[i].setTurnBrakeMode(false);
     }
 
-    this.fieldRelatve = true;
     for (int i = 0; i < 4; ++i) {
         currentModulePositions[i] = Modules[i].getPosition(true);
     }
@@ -240,6 +243,7 @@ public Swerve() {
     e.printStackTrace();
         }
 
+    m_OdometryThread = new OdometryThread();
     m_OdometryThread.start();
 
   }
