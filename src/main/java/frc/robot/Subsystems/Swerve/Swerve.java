@@ -262,6 +262,7 @@ public void periodic(){
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]AbsoluteAngle", Modules[i].getCurrentSignals()[3].getValueAsDouble());
     }
     logModuleStates("SwerveModuleStates/MeasuredStates", currentModuleStates);
+    logModuleStates("SwerveModuleStates/DesiredStates", setpointModuleStates);
     //Logger.recordOutput("OculusPosituion", questNav.getPose());
     Logger.recordOutput("Odometry/PoseRaw", odometry.getPoseMeters());
 
