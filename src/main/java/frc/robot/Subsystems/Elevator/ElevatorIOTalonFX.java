@@ -5,7 +5,6 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
-import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
@@ -16,7 +15,6 @@ import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Temperature;
 import edu.wpi.first.units.measure.Voltage;
 import frc.commons.Conversions;
-import frc.commons.LoggedTunableNumber;
 import frc.robot.Constants.canIDConstants;
 import frc.robot.Constants.elevatorConstants;
 
@@ -38,21 +36,10 @@ public class ElevatorIOTalonFX implements ElevatorIO {
     private final StatusSignal<Voltage> rightVoltage;
 
     private final StatusSignal<Angle> leftElevatorPos;
-
-    /* LoggedTunableNumbers */
-    LoggedTunableNumber kP = new LoggedTunableNumber("Elevator/kP", 0);
-    LoggedTunableNumber kD = new LoggedTunableNumber("Elevator/kD", 0);
-    LoggedTunableNumber kS = new LoggedTunableNumber("Elevator/kS", 0);
-    LoggedTunableNumber kV = new LoggedTunableNumber("Elevator/kV", 0);
-    LoggedTunableNumber kG = new LoggedTunableNumber("Elevator/kG",0); 
-    LoggedTunableNumber CruiseVelocity = new LoggedTunableNumber( "Elevator/MMCruiseVelocity",10); 
-    LoggedTunableNumber Acceleration = new LoggedTunableNumber( "Elevator/MMAcceleration",20); 
-    LoggedTunableNumber Jerk = new LoggedTunableNumber("Elevator/MMJerk",5000); //10000 was used on 2024
     
     /* Control Requests */
     private MotionMagicVoltage motionMagicRequest;
     private VoltageOut voltageOutRequest;
-    private NeutralOut neutralOutRequest;
 
     /* Doubles */
     private double setpointMeters;
@@ -79,7 +66,6 @@ public class ElevatorIOTalonFX implements ElevatorIO {
         /* Control Requests */
         motionMagicRequest = new MotionMagicVoltage(0).withEnableFOC(true);
         voltageOutRequest = new VoltageOut(0).withEnableFOC(true);
-        neutralOutRequest = new NeutralOut();
 
         /* Doubles */
         setpointMeters = 0;
@@ -98,8 +84,8 @@ public class ElevatorIOTalonFX implements ElevatorIO {
         rightConfigs.MotorOutput.Inverted = elevatorConstants.elevatorMotorInvert;
         
         /* Motion Magic Configuration */
-        leftConfigs.MotionMagic.MotionMagicCruiseVelocity = 10;
-        leftConfigs.MotionMagic.MotionMagicAcceleration =20;
+        leftConfigs.MotionMagic.MotionMagicCruiseVelocity = 40;
+        leftConfigs.MotionMagic.MotionMagicAcceleration = 40;
         leftConfigs.MotionMagic.MotionMagicJerk = 10000;
 
         /* Slot 0 Configuration */
@@ -175,9 +161,5 @@ public class ElevatorIOTalonFX implements ElevatorIO {
 
     public void zeroSensor(){
         leftMotor.setPosition(0);
-    }
-
-    public void coast(){
-        leftMotor.setControl(neutralOutRequest);
     }
 }

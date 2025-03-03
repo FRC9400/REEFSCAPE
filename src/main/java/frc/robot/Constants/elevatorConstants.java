@@ -5,8 +5,6 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.math.util.Units;
 
-import frc.commons.Conversions;
-
 public class elevatorConstants {
     /* Inverts */
     public static final InvertedValue elevatorMotorInvert = InvertedValue.Clockwise_Positive;
@@ -20,27 +18,20 @@ public class elevatorConstants {
     
     /* Max and Min Heights */
     public static final double minHeightMeters = 0;
-    public static final double maxHeightMeters = Units.inchesToMeters(21); //Without plate fix
-    public static final double minHeightRotations = 0;
-    public static final double maxHeightRotations = Conversions.metersToRotations(maxHeightMeters, wheelCircumferenceMeters, gearRatio);
-
+    public static final double maxHeightMeters = Units.inchesToMeters(24);
+    
     /* Current Limits */
-    public static final double statorCurrentLimit = 70;
-
-    /* PID Values*/
-    public static final double kP = 0;
-    public static final double kI = 0;
-    public static final double kD = 0;
-    public static final double kS = 0;
-    public static final double kV = 0;
-    public static final double kA = 0;
-    public static final double kG = 0;
+    public static final double statorCurrentLimit = 80;
 
     /* MotionMagic Values */
-    public static final double CruiseVelocityUp = 0;
-    public static final double AccelerationUp = 0;
-    public static final double Jerk = 0;
+    public static final double CruiseVelocity = 60;
+    public static final double Acceleration = 80;
+    public static final double Jerk = 10000;
 
-    public static final double CruiseVelocityDown = 0;
-    public static final double AccelerationDown = 0;
+    /* Heights in Meters */
+    public static final double L1 = 0;
+    public static final double L2 = Units.inchesToMeters(5);
+    public static final double L3 = Units.inchesToMeters(12.467784);
+    public static final double L3Algae = Units.inchesToMeters(19.315);
+    public static final double L4 = Units.inchesToMeters(23.925);
 }

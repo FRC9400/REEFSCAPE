@@ -1,83 +1,107 @@
 package frc.robot.Subsystems.Elevator;
 
-import com.ctre.phoenix6.SignalLogger;
-
-import static edu.wpi.first.units.Units.Volts;
-
 import org.littletonrobotics.junction.Logger;
 
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-
+import edu.wpi.first.math.util.Units;
 import frc.robot.Constants.elevatorConstants;
 
-public class Elevator extends SubsystemBase {
+public class Elevator {
     private final ElevatorIO elevatorIO;
-    public ElevatorIOInputsAutoLogged inputs = new ElevatorIOInputsAutoLogged();
-    private final SysIdRoutine elevatorRoutine;
+    private ElevatorStates elevatorState = ElevatorStates.IDLE;
+    private ElevatorIOInputsAutoLogged inputs = new ElevatorIOInputsAutoLogged();
+    private String selectedHeight = "L1";
+    private double elevatorSetpoint = 0; 
+
+    public enum ElevatorStates{
+        IDLE,
+        SETPOINT, 
+        ZEROSENSOR
+    }
 
     public Elevator(ElevatorIO elevatorIO){
         this.elevatorIO = elevatorIO;
-        elevatorRoutine = new SysIdRoutine(
-                new SysIdRoutine.Config(null, Volts.of(4), null,
-                        (state) -> SignalLogger.writeString("state", state.toString())),
-                new SysIdRoutine.Mechanism((volts) -> elevatorIO.requestVoltage(volts.in(Volts)), null,
-                        this));
 
     }
 
-    public Command elevatorSysIdCmd(){
-        return Commands.sequence(
-            //this.runOnce(() -> SignalLogger.start()),
-            this.runOnce(() -> elevatorIO.requestVoltage(1)),
-            /*elevatorRoutine
-                    .quasistatic(Direction.kForward)
-                    .until(() -> inputs.elevatorHeightMeters > elevatorConstants.maxHeightMeters),*/ //Keep in mind the max height is around 0.6
-            Commands.waitSeconds(1),
-            this.runOnce(() -> elevatorIO.requestVoltage(0))/*,
-            Commands.waitSeconds(1),
-            elevatorRoutine
-                    .quasistatic(Direction.kReverse)
-                    .until(() -> inputs.elevatorHeightMeters < 0.05), //Keep in mind the max height is around 0.6
-            this.runOnce(() -> elevatorIO.requestVoltage(0)),
-            Commands.waitSeconds(1),
-
-            elevatorRoutine
-                    .dynamic(Direction.kForward)
-                    .until(() -> inputs.elevatorHeightMeters > elevatorConstants.maxHeightMeters), //Keep in mind the max height is around 0.6
-            this.runOnce(() -> elevatorIO.requestVoltage(0)),
-            Commands.waitSeconds(1),
-
-            elevatorRoutine
-                    .dynamic(Direction.kReverse)
-                    .until(() -> inputs.elevatorHeightMeters < 0.05), //Keep in mind the max height is around 0.6
-            this.runOnce(() -> elevatorIO.requestVoltage(0)),
-            Commands.waitSeconds(1),
-            this.runOnce(() -> SignalLogger.stop())*/);
-    }
-
-    @Override
-    public void periodic(){
+    public void Loop(){
         elevatorIO.updateInputs(inputs);
         Logger.processInputs("Elevator", inputs);
+        Logger.recordOutput("ElevatorState", elevatorState);
+        Logger.recordOutput("Selected Height", selectedHeight);
+        Logger.recordOutput("Elevator Setpoint", elevatorSetpoint);
+
+        switch(elevatorState){
+            case IDLE:
+                elevatorIO.requestVoltage(0);
+                break;
+            case SETPOINT:
+                elevatorIO.requestMotionMagic(elevatorSetpoint);
+                break;
+            case ZEROSENSOR:
+                elevatorIO.zeroSensor();
+                break;
+            default:
+                break;
+        }
     }
 
-    public void requestMotionMagic(double meters){
-        elevatorIO.requestMotionMagic(meters);
+    public void requestMotionMagicCoral(){
+        if (selectedHeight == "L1"){
+            elevatorSetpoint = elevatorConstants.L1;
+        }
+        else if (selectedHeight == "L2"){
+            elevatorSetpoint = elevatorConstants.L2;
+        }
+        else if (selectedHeight == "L3"){
+            elevatorSetpoint = elevatorConstants.L3;
+        }
+        else if (selectedHeight == "L4"){
+            elevatorSetpoint = elevatorConstants.L4;
+        } else {
+            return;
+        }
+        setState(ElevatorStates.SETPOINT);
     }
 
-    public void requestVoltage(double volts){
-        elevatorIO.requestVoltage(volts);
+    public void requestMotionMagicAlgae(){
+        if (selectedHeight == "L2"){
+            elevatorSetpoint = elevatorConstants.L3;
+        } else if (selectedHeight == "L3"){
+            elevatorSetpoint = elevatorConstants.L3Algae;
+        } 
+        setState(ElevatorStates.SETPOINT);
+    }
+
+    public void requestHold(){
+        setState(ElevatorStates.SETPOINT);
+    }
+
+    public void requestElevatorDown(){
+        elevatorSetpoint = 0;
+        setState(ElevatorStates.SETPOINT);
+    }
+
+    public void requestIdle(){
+        setState(ElevatorStates.IDLE);
     }
 
     public void zeroSensor(){
-        elevatorIO.zeroSensor();
+        setState(ElevatorStates.ZEROSENSOR);
     }
 
-    public void coast(){
-        elevatorIO.coast();
+    public void setHeight(String height){
+        selectedHeight = height;
+    }
+
+    public boolean atSetpoint(){
+        return Math.abs(inputs.elevatorHeightMeters - elevatorSetpoint) < Units.inchesToMeters(0.5);
+    }
+
+    public void setState(ElevatorStates nextState){
+        this.elevatorState = nextState;
+    }
+
+    public ElevatorStates getElevatorState(){
+        return this.elevatorState;
     }
 }           

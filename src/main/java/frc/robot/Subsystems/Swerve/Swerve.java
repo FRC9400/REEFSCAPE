@@ -29,6 +29,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -48,43 +49,38 @@ import frc.robot.autons.AutoConstants;
  * Gyro added / 
  * Added Odometry Thread class, synchronoulsy wait for signals/
  * Retained logging swervemodulestates and pose /
- * Added Oculus pose
+ * Added Oculus pose 
+ * 
+ * To do
+ * add opi stuff (yikes!)
+ * offset oculus pose
+ * does this even work????
  */
 
 public class Swerve extends SubsystemBase{
-    private QuestNav questNav = new QuestNav();
+    ProfiledPIDController controller = new ProfiledPIDController(0, 0, 0, null); //create pose constants
+    Pose2d initialPose = new Pose2d();
+    //private QuestNav questNav = new QuestNav();
     Pigeon2 pigeon = new Pigeon2(canIDConstants.pigeon, "canivore");
     private StatusSignal<Angle> m_heading = pigeon.getYaw();
     private StatusSignal<AngularVelocity> m_angularVelocity = pigeon.getAngularVelocityZDevice();
 
     public final ModuleIOTalonFX[] Modules = new ModuleIOTalonFX[4];
-    private final boolean fieldRelatve;
     private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(kinematicsConstants.FL, kinematicsConstants.FR, kinematicsConstants.BL,
         kinematicsConstants.BR);
     OdometryThread m_OdometryThread;
     BaseStatusSignal[] m_allSignals;
 
     // from swervestate class
-    public Pose2d poseRaw = new Pose2d();
-        /** The current velocity of the robot */
-    public ChassisSpeeds Speeds = new ChassisSpeeds();
-        /** The current module states */
+    public Pose2d poseRaw;
+    public ChassisSpeeds Speeds;
     public SwerveModuleState[] currentModuleStates;
-        /** The target module states */
-    public SwerveModuleState[] setpointModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
-        0,
-        0,
-        0,
-        new Rotation2d()));
-        /** The current module positions */
+    public SwerveModuleState[] setpointModuleStates;
     public SwerveModulePosition[] currentModulePositions;
-    public Rotation2d heading= new Rotation2d();
-    public int SuccessfulDaqs;
-        /** Number of failed data acquisitions */
-    public int FailedDaqs;
-    SwerveModuleState[] desiredModuleStates = new SwerveModuleState[4];
-    private final SwerveDriveOdometry odometry;
-
+    public Rotation2d heading = new Rotation2d();
+    public int SuccessfulDaqs = 0;
+    public int FailedDaqs = 0;
+    private SwerveDriveOdometry odometry;
 
     private final SysIdRoutine driveRoutine = new SysIdRoutine(new SysIdRoutine.Config(
         null, 
@@ -183,6 +179,7 @@ public class Swerve extends SubsystemBase{
     
 }
 public Swerve() {
+    // initialPose = getVisionPose()
     Modules[0] = new ModuleIOTalonFX(canIDConstants.driveMotor[0], canIDConstants.steerMotor[0], canIDConstants.CANcoder[0],swerveConstants.moduleConstants.CANcoderOffsets[0],
     swerveConstants.moduleConstants.driveMotorInverts[0], swerveConstants.moduleConstants.steerMotorInverts[0], swerveConstants.moduleConstants.CANcoderInverts[0]);
 
@@ -194,24 +191,30 @@ public Swerve() {
 
     Modules[3] = new ModuleIOTalonFX(canIDConstants.driveMotor[3], canIDConstants.steerMotor[3], canIDConstants.CANcoder[3], swerveConstants.moduleConstants.CANcoderOffsets[3],
     swerveConstants.moduleConstants.driveMotorInverts[3], swerveConstants.moduleConstants.steerMotorInverts[3], swerveConstants.moduleConstants.CANcoderInverts[3]);
+    
     currentModulePositions = new SwerveModulePosition[4];
-    currentModuleStates = new SwerveModuleState[4];
-    this.fieldRelatve = true;
+
     for (int i = 0; i < 4; ++i) {
         currentModulePositions[i] = Modules[i].getPosition(true);
-        currentModuleStates[i] = Modules[i].getState();
     }
-    odometry = new SwerveDriveOdometry(kinematics, pigeon.getRotation2d(),
-    currentModulePositions); 
-    m_allSignals = new BaseStatusSignal[18];
-    m_OdometryThread = new OdometryThread();
+
+    poseRaw = new Pose2d();
+    Speeds = new ChassisSpeeds();
+    currentModuleStates = new SwerveModuleState[4];
+    setpointModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
+        0,
+        0,
+        0,
+        new Rotation2d()));
+
+
     for (int i = 0; i < 4; i++) {
         Modules[i].setDriveBrakeMode(true);
         Modules[i].setTurnBrakeMode(false);
     }
 
     
-
+    /* 
     RobotConfig config;
     try{
         config = RobotConfig.fromGUISettings();
@@ -240,8 +243,11 @@ public Swerve() {
     } catch (Exception e) {
     e.printStackTrace();
         }
-
+*/
+    m_OdometryThread = new OdometryThread();
     m_OdometryThread.start();
+    odometry = new SwerveDriveOdometry(kinematics, pigeon.getRotation2d(),
+        currentModulePositions); 
 
   }
 
@@ -255,10 +261,8 @@ public void periodic(){
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]SteerStator", Modules[i].getCurrentSignals()[2].getValueAsDouble());
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]AbsoluteAngle", Modules[i].getCurrentSignals()[3].getValueAsDouble());
     }
-    m_OdometryThread.run();
-    logModuleStates("SwerveModuleStates/setpointStates", desiredModuleStates);
     logModuleStates("SwerveModuleStates/MeasuredStates", currentModuleStates);
-    Logger.recordOutput("OculusPosituion", questNav.getPose());
+    //Logger.recordOutput("OculusPosituion", questNav.getPose());
     Logger.recordOutput("Odometry/PoseRaw", odometry.getPoseMeters());
 
 }
@@ -266,7 +270,7 @@ public void periodic(){
 public void requestDesiredState(double x_speed, double y_speed, double rot_speed, boolean fieldRelative, boolean isOpenLoop){
     Rotation2d gyroPosition = new Rotation2d(m_heading.getValueAsDouble() * Math.PI * 2);
     if (fieldRelative && isOpenLoop){
-        desiredModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
+        setpointModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
             x_speed,
             y_speed,
             rot_speed,
@@ -277,7 +281,7 @@ public void requestDesiredState(double x_speed, double y_speed, double rot_speed
         }
     }
     else if(fieldRelative && !isOpenLoop){
-        desiredModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
+        setpointModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
             x_speed,
             y_speed,
             rot_speed,
@@ -288,7 +292,7 @@ public void requestDesiredState(double x_speed, double y_speed, double rot_speed
         }
     }
     else if(!fieldRelative && !isOpenLoop){
-        desiredModuleStates = kinematics.toSwerveModuleStates(new ChassisSpeeds(
+        setpointModuleStates = kinematics.toSwerveModuleStates(new ChassisSpeeds(
             x_speed,
             y_speed,
             rot_speed
@@ -306,7 +310,7 @@ public Pose2d getPoseRaw(){
 
 public void resetGyro(double yawDeg){
     pigeon.setYaw(yawDeg);
-    questNav.zeroHeading();
+    //questNav.zeroHeading();
 }
 
 
