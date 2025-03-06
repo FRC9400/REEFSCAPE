@@ -13,12 +13,18 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import frc.commons.LoggedTunableNumber;
 import frc.robot.Constants.visionConstants;
 
 public class Vision {
     private final PhotonCamera camera;
     private Matrix<N3, N1> curStdDevs;
     private final PhotonPoseEstimator poseEstimator;
+
+    LoggedTunableNumber singleTagX = new LoggedTunableNumber("Vision/singleX", 3.0);
+    LoggedTunableNumber singleTagY = new LoggedTunableNumber("Vision/singleY", 3.0);
+    LoggedTunableNumber singleTagTheta = new LoggedTunableNumber("Vision/singleTheta", 5.5);
+
 
     public Vision(int id){
         camera = new PhotonCamera(visionConstants.name[id]);
