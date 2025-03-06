@@ -49,7 +49,7 @@ import frc.robot.autons.AutoConstants;
  * Gyro added / 
  * Added Odometry Thread class, synchronoulsy wait for signals/
  * Retained logging swervemodulestates and pose /
- * Added Oculus pose 
+ * Added Oculus pose /
  * 
  * To do
  * add opi stuff (yikes!)
@@ -60,7 +60,7 @@ import frc.robot.autons.AutoConstants;
 public class Swerve extends SubsystemBase{
     ProfiledPIDController controller = new ProfiledPIDController(0, 0, 0, null); //create pose constants
     Pose2d initialPose = new Pose2d();
-    //private QuestNav questNav = new QuestNav();
+    private QuestNav questNav = new QuestNav();
     Pigeon2 pigeon = new Pigeon2(canIDConstants.pigeon, "canivore");
     private StatusSignal<Angle> m_heading = pigeon.getYaw();
     private StatusSignal<AngularVelocity> m_angularVelocity = pigeon.getAngularVelocityZDevice();
@@ -86,6 +86,8 @@ public class Swerve extends SubsystemBase{
         null, 
         Volts.of(3), 
         Seconds.of(2), 
+
+    
         (state) -> SignalLogger.writeString("state", state.toString())), 
         new SysIdRoutine.Mechanism((
             Voltage volts) -> driveVoltage(volts.in(Volts)),
@@ -170,7 +172,7 @@ public class Swerve extends SubsystemBase{
                     currentModuleStates[i] = Modules[i].getState();
                   }
                   heading =
-                  new Rotation2d(BaseStatusSignal.getLatencyCompensatedValue(m_heading, m_angularVelocity).magnitude() * Math.PI * 2);
+                  new Rotation2d(BaseStatusSignal.getLatencyCompensatedValue(m_heading, m_angularVelocity).magnitude() * Math.PI/180.0);
 
                   odometry.update(heading, currentModulePositions); //update odoemtry threa
                 
@@ -263,8 +265,10 @@ public void periodic(){
     }
     logModuleStates("SwerveModuleStates/MeasuredStates", currentModuleStates);
     logModuleStates("SwerveModuleStates/DesiredStates", setpointModuleStates);
-    //Logger.recordOutput("OculusPosituion", questNav.getPose());
+    Logger.recordOutput("OculusPosituion", questNav.getPose());
     Logger.recordOutput("Odometry/PoseRaw", odometry.getPoseMeters());
+    Logger.recordOutput("Swerve/SuccessfulDaqs", SuccessfulDaqs);
+    Logger.recordOutput("Swerve/FailedDaqs", FailedDaqs);
 
 }
 
@@ -311,7 +315,7 @@ public Pose2d getPoseRaw(){
 
 public void resetGyro(double yawDeg){
     pigeon.setYaw(yawDeg);
-    //questNav.zeroHeading();
+    questNav.zeroHeading();
 }
 
 
@@ -390,6 +394,11 @@ public Command steerSysIdCmd(){
             Commands.waitSeconds(1), 
         this.runOnce(() -> SignalLogger.stop())
     );
+}
+public void zeroWheels(){
+    for(int i = 0; i < 4; i++){
+        Modules[i].resetToAbsolute();
+    }
 }
 
 private void logModuleStates(String key, SwerveModuleState[] states) {
