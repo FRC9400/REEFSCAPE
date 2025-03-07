@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.Volts;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.littletonrobotics.junction.Logger;
 
@@ -55,13 +56,16 @@ import frc.robot.autons.AutoConstants;
  * 
  * To do
  * add opi stuff (yikes!)
- * offset oculus pose
+ * offset oculus pose / 
  * does this even work????
  */
 
 public class Swerve extends SubsystemBase{
     ProfiledPIDController controller = new ProfiledPIDController(0, 0, 0, null); //create pose constants
-    Pose2d questPose;
+    Pose2d transformedQuestPose;
+    Pose2d rawQuestPose;
+    Pose2d initialPose = new Pose2d();
+    boolean initialPoseFed = false;
     Transform2d questToRobot = new Transform2d(new Translation2d(), new Rotation2d());
     private QuestNav questNav = new QuestNav();
     Pigeon2 pigeon = new Pigeon2(canIDConstants.pigeon, "canivore");
@@ -178,6 +182,8 @@ public class Swerve extends SubsystemBase{
                   new Rotation2d(BaseStatusSignal.getLatencyCompensatedValue(m_heading, m_angularVelocity).magnitude() * Math.PI/180.0);
 
                   odometry.update(heading, currentModulePositions); //update odoemtry threa
+                  rawQuestPose = questNav.getPose();
+                  transformedQuestPose = transformQuestPose(new Transform2d(initialPose.getTranslation(), initialPose.getRotation()));
                 
             }
     }
@@ -204,7 +210,8 @@ public Swerve() {
     }
 
     poseRaw = new Pose2d();
-    questPose = questNav.getPose();
+    transformedQuestPose = questNav.getPose();
+    rawQuestPose = questNav.getPose();
     Speeds = new ChassisSpeeds();
     currentModuleStates = new SwerveModuleState[4];
     setpointModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
@@ -219,37 +226,6 @@ public Swerve() {
         Modules[i].setTurnBrakeMode(false);
     }
 
-    
-    /* 
-    RobotConfig config;
-    try{
-        config = RobotConfig.fromGUISettings();
-        AutoBuilder.configure(
-            this::getPoseRaw,
-            this::resetPose,
-            this::getRobotRelativeSpeeds, 
-            (speeds, feedforwards) -> driveRobotRelative(speeds), 
-            new PPHolonomicDriveController(
-                    new PIDConstants(0.0, 0.0, 0.0), // Translation PID constants
-                    new PIDConstants(0.0, 0.0, 0.0) // Rotation PID constants
-            ),
-            config, 
-            () -> {
-              // Boolean supplier that controls when the path will be mirrored for the red alliance
-              // This will flip the path being followed to the red side of the field.
-              // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
-              var alliance = DriverStation.getAlliance();
-              if (alliance.isPresent()) {
-                return alliance.get() == DriverStation.Alliance.Red;
-              }
-              return false;
-            },
-            this 
-    );
-    } catch (Exception e) {
-    e.printStackTrace();
-        }
-*/
     m_OdometryThread = new OdometryThread();
     m_OdometryThread.start();
     odometry = new SwerveDriveOdometry(kinematics, pigeon.getRotation2d(),
@@ -269,7 +245,10 @@ public void periodic(){
     }
     logModuleStates("SwerveModuleStates/MeasuredStates", currentModuleStates);
     logModuleStates("SwerveModuleStates/DesiredStates", setpointModuleStates);
-    Logger.recordOutput("OculusPosituion", questPose);
+    Logger.recordOutput("InitialPoseFed", initialPoseFed);
+    Logger.recordOutput("InitialPose", initialPose);
+    Logger.recordOutput("TransformedOculusPosituion", transformedQuestPose);
+    Logger.recordOutput("RawOculusPosituion", rawQuestPose);
     Logger.recordOutput("Odometry/PoseRaw", odometry.getPoseMeters());
     Logger.recordOutput("Swerve/SuccessfulDaqs", SuccessfulDaqs);
     Logger.recordOutput("Swerve/FailedDaqs", FailedDaqs);
@@ -312,6 +291,10 @@ public void requestDesiredState(double x_speed, double y_speed, double rot_speed
         }
     }
     
+}
+public void feedInitialPose(Pose2d intialPose){
+    this.initialPose = initialPose;
+    initialPoseFed = true;
 }
 public Pose2d getPoseRaw(){
     return odometry.getPoseMeters();
@@ -405,9 +388,12 @@ public void zeroWheels(){
     }
 }
 
-public void transformQuestPose(Transform2d initialPoseOffset){
-    questPose
+public Pose2d transformQuestPose(Transform2d initialPoseOffset){
+    Pose2d TransformedQuestPose= this.rawQuestPose.transformBy(questToRobot).transformBy(initialPoseOffset);
+    return TransformedQuestPose;
+   
 }
+
 
 private void logModuleStates(String key, SwerveModuleState[] states) {
     List<Double> dataArray = new ArrayList<Double>();

@@ -47,6 +47,7 @@ public class ModuleIOTalonFX{
     private final TalonFX driveMotor;
     private final TalonFX steerMotor;
     private final CANcoder angleEncoder;
+    private double CANcoderOffset;
     private TalonFXConfiguration driveConfigs;
     private TalonFXConfiguration steerConfigs;
     private CANcoderConfiguration angleEncoderConfigs;
@@ -76,6 +77,7 @@ public class ModuleIOTalonFX{
         driveMotor = new TalonFX(driveID, "canivore");
         steerMotor = new TalonFX(steerID, "canivore");
         angleEncoder = new CANcoder(CANcoderID, "canivore");
+        this.CANcoderOffset = CANcoderOffset;
         m_internalState = new SwerveModulePosition();
         driveConfigs = new TalonFXConfiguration();
         steerConfigs = new TalonFXConfiguration();
@@ -140,10 +142,10 @@ public class ModuleIOTalonFX{
         steerMotorOutputConfigs.Inverted = steerInvert;
 
         var steerFeedbackConfigs = steerConfigs.Feedback;
-        steerFeedbackConfigs.FeedbackRemoteSensorID =  CANcoderID;
-        steerFeedbackConfigs.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-        steerFeedbackConfigs.SensorToMechanismRatio = 1.0;
-        steerFeedbackConfigs.RotorToSensorRatio = 150.0/7.0;
+        steerFeedbackConfigs.FeedbackSensorSource =  FeedbackSensorSourceValue.RotorSensor;
+        //steerFeedbackConfigs.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+        //steerFeedbackConfigs.SensorToMechanismRatio = 1.0;
+        //steerFeedbackConfigs.RotorToSensorRatio = 150.0/7.0;
 
 
         var steerSlot0Configs = steerConfigs.Slot0;
@@ -162,22 +164,17 @@ public class ModuleIOTalonFX{
 
         // CANcoder
         var angleEncoderConfig = new CANcoderConfiguration();
-        angleEncoderConfig.MagnetSensor.MagnetOffset = CANcoderOffset;
-        angleEncoderConfig.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 1;
+        //angleEncoderConfig.MagnetSensor.MagnetOffset = CANcoderOffset;
+        //angleEncoderConfig.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 1;
         angleEncoderConfig.MagnetSensor.SensorDirection =  SensorDirectionValue.CounterClockwise_Positive;
            
 
         driveMotor.getConfigurator().apply(driveConfigs);
         steerMotor.getConfigurator().apply(steerConfigs);
-        StatusCode response = angleEncoder.getConfigurator().apply(angleEncoderConfigs);
-        if (!response.isOK()) {
-            System.out.println(
-                "CANcoder ID "
-                    + angleEncoder.getDeviceID()
-                    + " failed config with error "
-                    + response.toString());
-          }
-
+        StatusCode stat = angleEncoder.getConfigurator().apply(angleEncoderConfigs);
+        if(!stat.isOK()){
+            System.out.println("Cancoder[" + CANcoderID + "] failed config: " + stat.toString());
+        }
 
         m_steerPosition = steerMotor.getRotorPosition();
         m_drivePosition = driveMotor.getRotorPosition();
@@ -216,6 +213,8 @@ public class ModuleIOTalonFX{
         BaseStatusSignal.getLatencyCompensatedValue(m_drivePosition, m_driveVelocity).magnitude();
     double angle_rot =
         BaseStatusSignal.getLatencyCompensatedValue(m_steerPosition, m_steerVelocity).magnitude();
+    
+    angle_rot = angle_rot/swerveConstants.moduleConstants.steerGearRatio;
 
     m_internalState.distanceMeters = Conversions.RotationsToMeters(drive_rot, swerveConstants.moduleConstants.wheelCircumferenceMeters, swerveConstants.moduleConstants.driveGearRatio);
 
@@ -226,7 +225,7 @@ public class ModuleIOTalonFX{
   }
 
   public SwerveModuleState getState(){
-    return new SwerveModuleState(Conversions.RPStoMPS(m_driveVelocity.getValueAsDouble(), swerveConstants.moduleConstants.wheelCircumferenceMeters, swerveConstants.moduleConstants.driveGearRatio), Rotation2d.fromRotations(m_steerPosition.getValueAsDouble()));
+    return new SwerveModuleState(Conversions.RPStoMPS(m_driveVelocity.getValueAsDouble(), swerveConstants.moduleConstants.wheelCircumferenceMeters, swerveConstants.moduleConstants.driveGearRatio), m_internalState.angle);
   }
 
 
@@ -283,6 +282,12 @@ public class ModuleIOTalonFX{
         driveMotor.setControl(velocityVoltageRequest);
     }
 
+    public void resetToAbsolute() {
+        double absolutePositionRotations = angleEncoder.getAbsolutePosition().getValueAsDouble() - CANcoderOffset;
+        double absolutePositionSteerRotations = absolutePositionRotations * moduleConstants.steerGearRatio;
+        steerMotor.setPosition(absolutePositionSteerRotations);
+    }
+
     // Does this update?
     // steerPos, driveVel, steerVel, drivePos
     public BaseStatusSignal[] getSignals(){
@@ -297,6 +302,7 @@ public class ModuleIOTalonFX{
     public double getDriveVelocity(){
         return m_driveVelocity.getValueAsDouble();
     }
+
 
     public void setTurnBrakeMode(boolean brake){
         var steerMotorOutputConfigs = steerConfigs.MotorOutput;
