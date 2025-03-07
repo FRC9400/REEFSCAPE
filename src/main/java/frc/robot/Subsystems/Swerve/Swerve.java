@@ -32,6 +32,8 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -59,7 +61,8 @@ import frc.robot.autons.AutoConstants;
 
 public class Swerve extends SubsystemBase{
     ProfiledPIDController controller = new ProfiledPIDController(0, 0, 0, null); //create pose constants
-    Pose2d initialPose = new Pose2d();
+    Pose2d questPose;
+    Transform2d questToRobot = new Transform2d(new Translation2d(), new Rotation2d());
     private QuestNav questNav = new QuestNav();
     Pigeon2 pigeon = new Pigeon2(canIDConstants.pigeon, "canivore");
     private StatusSignal<Angle> m_heading = pigeon.getYaw();
@@ -201,6 +204,7 @@ public Swerve() {
     }
 
     poseRaw = new Pose2d();
+    questPose = questNav.getPose();
     Speeds = new ChassisSpeeds();
     currentModuleStates = new SwerveModuleState[4];
     setpointModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
@@ -265,7 +269,7 @@ public void periodic(){
     }
     logModuleStates("SwerveModuleStates/MeasuredStates", currentModuleStates);
     logModuleStates("SwerveModuleStates/DesiredStates", setpointModuleStates);
-    Logger.recordOutput("OculusPosituion", questNav.getPose());
+    Logger.recordOutput("OculusPosituion", questPose);
     Logger.recordOutput("Odometry/PoseRaw", odometry.getPoseMeters());
     Logger.recordOutput("Swerve/SuccessfulDaqs", SuccessfulDaqs);
     Logger.recordOutput("Swerve/FailedDaqs", FailedDaqs);
@@ -399,6 +403,10 @@ public void zeroWheels(){
     for(int i = 0; i < 4; i++){
         Modules[i].resetToAbsolute();
     }
+}
+
+public void transformQuestPose(Transform2d initialPoseOffset){
+    questPose
 }
 
 private void logModuleStates(String key, SwerveModuleState[] states) {
