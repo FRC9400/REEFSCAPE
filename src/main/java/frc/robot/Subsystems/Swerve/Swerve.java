@@ -182,7 +182,7 @@ public class Swerve extends SubsystemBase{
                   new Rotation2d(BaseStatusSignal.getLatencyCompensatedValue(m_heading, m_angularVelocity).magnitude() * Math.PI/180.0);
 
                   odometry.update(heading, currentModulePositions); //update odoemtry threa
-                  rawQuestPose = questNav.getPose();
+                  rawQuestPose = new Pose2d(questNav.getPose().getTranslation(), questNav.getPose().getRotation().unaryMinus());
                   transformedQuestPose = transformQuestPose(new Transform2d(initialPose.getTranslation(), initialPose.getRotation()));
                 
             }
