@@ -51,9 +51,11 @@ import frc.robot.autons.AutoConstants;
 
 
 public class Swerve extends SubsystemBase{
+    public int updates = 0;
+
     LoggedTunableNumber visionStdDevsX = new LoggedTunableNumber("Vision/visionX", 0.8);
     LoggedTunableNumber visionStdDevsY = new LoggedTunableNumber("Vision/visionY", 0.8);
-    LoggedTunableNumber visionStdDevsTheta = new LoggedTunableNumber("Vision/visionTheta", 1.1);
+    LoggedTunableNumber visionStdDevsTheta = new LoggedTunableNumber("Vision/visionTheta", 0.8);
 
     private final GyroIO gyroIO = new GyroIOPigeon2(canIDConstants.pigeon);
     private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
@@ -174,6 +176,8 @@ public class Swerve extends SubsystemBase{
         //logModuleStates("SwerveModuleStates/optimizedSetpointStates", getOptimizedSetPointStates());
         logModuleStates("SwerveModuleStates/MeasuredStates", getMeasuredStates());
         Logger.recordOutput("Odometry/PoseRaw", poseRaw);
+        Logger.recordOutput("PoseEst/Pose", poseEstimator.getEstimatedPosition());
+        Logger.recordOutput("PoseEst/Updates", updates);
 
         if(visionStdDevsX.hasChanged(visionStdDevsX.hashCode())||
         visionStdDevsY.hasChanged(visionStdDevsY.hashCode())||
@@ -383,9 +387,11 @@ public class Swerve extends SubsystemBase{
 
     public void addVisionMeasurement(Pose2d visionMeasurement, double timestampSeconds){
         poseEstimator.addVisionMeasurement(visionMeasurement, timestampSeconds);
+        updates++;
     }
     
     public void addVisionMeasurement(Pose2d visionMeasurement, double timestampSeconds, Matrix<N3,N1> stdDevs){
         poseEstimator.addVisionMeasurement(visionMeasurement, timestampSeconds, stdDevs);
+        updates++;
     }
 }

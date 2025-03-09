@@ -4,12 +4,15 @@
 
 package frc.robot;
 
+import java.util.Optional;
+
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
 import org.littletonrobotics.junction.wpilog.WPILOGReader;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
+import org.photonvision.EstimatedRobotPose;
 
 import com.ctre.phoenix6.SignalLogger;
 import com.pathplanner.lib.path.PathPlannerPath;
@@ -29,6 +32,8 @@ import frc.robot.autons.AutonomousSelector.modes;
 public class Robot extends LoggedRobot {
   private Vision visionShrek;
   private Vision visionDonkey;
+
+  private Optional<EstimatedRobotPose> lastPose;
 
   private Command m_autonomousCommand;
 
@@ -53,6 +58,8 @@ public class Robot extends LoggedRobot {
     SignalLogger.setPath("/media/sda1/");
     
     Logger.recordMetadata("ProjectName", "MyProject"); // Set a metadata value
+
+    //Logger.recordOutput("PoseEst/lastPose", lastPose.get().estimatedPose);
 
     if (isReal()) {
       Logger.addDataReceiver(new WPILOGWriter()); // Log to a USB stick ("/U/logs")
@@ -87,6 +94,13 @@ m_robotContainer.getSwerve().addVisionMeasurement(est.estimatedPose.toPose2d(), 
       }
     );
 
+    if(!shrekEst.isEmpty()){
+      m_robotContainer.getSwerve().updates++;
+    }
+    else{
+      m_robotContainer.getSwerve().updates--;
+    }
+
     var donkeyEst = visionDonkey.getEstimatedRobotPose();
     donkeyEst.ifPresent(
       est -> {
@@ -94,6 +108,7 @@ var estStdDevs = visionDonkey.getEstimationStdDevs();
 m_robotContainer.getSwerve().addVisionMeasurement(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
       }
     );
+
   }
 
   @Override

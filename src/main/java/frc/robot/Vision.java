@@ -20,6 +20,7 @@ public class Vision {
     private final PhotonCamera camera;
     private Matrix<N3, N1> curStdDevs;
     private final PhotonPoseEstimator poseEstimator;
+    public int a = 1;
 
     LoggedTunableNumber singleTagX = new LoggedTunableNumber("Vision/singleX", 3.0);
     LoggedTunableNumber singleTagY = new LoggedTunableNumber("Vision/singleY", 3.0);
@@ -43,10 +44,10 @@ public class Vision {
 
     private void updateStdDevs(Optional<EstimatedRobotPose> robotPose, List<PhotonTrackedTarget> targets){
         if(robotPose.isEmpty()){
-            curStdDevs=visionConstants.kSingleTagStdDevs;
+            curStdDevs= new Matrix<N3,N1>(VecBuilder.fill(singleTagX.get(), singleTagY.get(), singleTagTheta.get()));//visionConstants.kSingleTagStdDevs;
         }
         else{
-            var estStdDevs = visionConstants.kSingleTagStdDevs;
+            var estStdDevs = new Matrix<N3,N1>(VecBuilder.fill(singleTagX.get(), singleTagY.get(), singleTagTheta.get()));//visionConstants.kSingleTagStdDevs;
             int numTags = 0;
             double avgDist = 0;
 
@@ -58,12 +59,12 @@ public class Vision {
             }
             
             if(numTags==0){
-                curStdDevs=visionConstants.kSingleTagStdDevs;
+                curStdDevs=new Matrix<N3,N1>(VecBuilder.fill(singleTagX.get(), singleTagY.get(), singleTagTheta.get()));
             }
             else{
                 avgDist/=numTags;
                 if(numTags>1){estStdDevs=visionConstants.kMultiTagStdDevs;}
-                if(numTags==1&&avgDist>4){estStdDevs=VecBuilder.fill(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);}
+                if(numTags==1&&avgDist>6){estStdDevs=VecBuilder.fill(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);}
                 else{estStdDevs = estStdDevs.times(1+(avgDist*avgDist)/30);}
                 curStdDevs=estStdDevs;
             }
@@ -72,5 +73,9 @@ public class Vision {
 
     public Matrix<N3,N1> getEstimationStdDevs(){
         return curStdDevs;
+    }
+
+    public boolean exists(){
+        return camera.isConnected();
     }
 }
