@@ -26,11 +26,17 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -53,15 +59,21 @@ import frc.robot.autons.AutoConstants;
  * Added Odometry Thread class, synchronoulsy wait for signals/
  * Retained logging swervemodulestates and pose /
  * Added Oculus pose /
+ * offset oculus pose / 
  * 
  * To do
  * add opi stuff (yikes!)
- * offset oculus pose / 
  * does this even work????
+ * fused pose with quest, quest updates visionmeasurement at 50 hz (quest updates at 120) odom updates at 250hz /
+ * figure how to ingegrate profiled pid
+ * tuning stdevs
  */
 
 public class Swerve extends SubsystemBase{
+    SwerveDrivePoseEstimator poseEstimator;
     ProfiledPIDController controller = new ProfiledPIDController(0, 0, 0, null); //create pose constants
+    Matrix<N3, N1> visionSTDevs = VecBuilder.fill(0, 0,0); //
+    Matrix<N3, N1> stateSTDevs = VecBuilder.fill(0, 0, 0); // how to tune how to tune
     Pose2d transformedQuestPose;
     Pose2d rawQuestPose;
     Pose2d initialPose = new Pose2d();
@@ -77,6 +89,7 @@ public class Swerve extends SubsystemBase{
         kinematicsConstants.BR);
     OdometryThread m_OdometryThread;
     BaseStatusSignal[] m_allSignals;
+
 
     // from swervestate class
     public Pose2d poseRaw;
@@ -141,6 +154,7 @@ public class Swerve extends SubsystemBase{
             public void start() {
                 if (!m_running) {
                     m_running = true;
+
                     m_thread.start();
                 }
             }
@@ -184,6 +198,7 @@ public class Swerve extends SubsystemBase{
                   odometry.update(heading, currentModulePositions); //update odoemtry threa
                   rawQuestPose = new Pose2d(questNav.getPose().getTranslation(), questNav.getPose().getRotation().unaryMinus());
                   transformedQuestPose = transformQuestPose(new Transform2d(initialPose.getTranslation(), initialPose.getRotation()));
+                  poseEstimator.update(heading, currentModulePositions);
                 
             }
     }
@@ -230,6 +245,7 @@ public Swerve() {
     m_OdometryThread.start();
     odometry = new SwerveDriveOdometry(kinematics, pigeon.getRotation2d(),
         currentModulePositions); 
+    poseEstimator = new SwerveDrivePoseEstimator(kinematics, heading, currentModulePositions, initialPose);
 
   }
 
@@ -237,6 +253,7 @@ public Swerve() {
 @Override
 public void periodic(){
     Logger.recordOutput("Swerve/GyroDeg", Conversions.RotationsToDegrees(m_heading.getValueAsDouble(), 1));
+    poseEstimator.addVisionMeasurement(transformedQuestPose, questNav.timestamp()); //units? should i be update pose estimator in periodic instead? 250hz vs 120hz
     for (int i = 0; i < 4; i++){
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]DriveStator", Modules[i].getCurrentSignals()[0].getValueAsDouble());
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]DriveSupply", Modules[i].getCurrentSignals()[1].getValueAsDouble());
@@ -245,6 +262,7 @@ public void periodic(){
     }
     logModuleStates("SwerveModuleStates/MeasuredStates", currentModuleStates);
     logModuleStates("SwerveModuleStates/DesiredStates", setpointModuleStates);
+    Logger.recordOutput("FusedPose", poseEstimator.getEstimatedPosition());
     Logger.recordOutput("InitialPoseFed", initialPoseFed);
     Logger.recordOutput("InitialPose", initialPose);
     Logger.recordOutput("TransformedOculusPosituion", transformedQuestPose);
@@ -296,8 +314,8 @@ public void feedInitialPose(Pose2d intialPose){
     this.initialPose = initialPose;
     initialPoseFed = true;
 }
-public Pose2d getPoseRaw(){
-    return odometry.getPoseMeters();
+public Pose2d getEstimatedPose(){
+    return poseEstimator.getEstimatedPosition();
 }
 
 public void resetGyro(double yawDeg){
@@ -305,6 +323,10 @@ public void resetGyro(double yawDeg){
     questNav.zeroHeading();
 }
 
+public void resetPoseEstimator(Pose2d pose){
+    poseEstimator.resetPose(pose);
+
+}
 
 public void resetPose(Pose2d pose){
     odometry.resetPosition(heading, currentModulePositions, pose);

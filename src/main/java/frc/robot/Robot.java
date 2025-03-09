@@ -111,15 +111,15 @@ public class Robot extends LoggedRobot {
       m_autonomousCommand = do_nothing;
     }
 
-    if(selector.get() == modes.TUNE_X){
+    else if(selector.get() == modes.TUNE_X){
       m_autonomousCommand = tune_x;
     }
 
-    if(selector.get() == modes.TUNE_Y){
+    else if(selector.get() == modes.TUNE_Y){
       m_autonomousCommand = tune_y;
     }
 
-    if(selector.get() == modes.TUNE_THETA){
+    else if(selector.get() == modes.TUNE_THETA){
       m_autonomousCommand = tune_theta;
     }
 

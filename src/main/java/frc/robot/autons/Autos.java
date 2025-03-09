@@ -19,7 +19,7 @@ public class Autos {
     public Autos(Swerve swerve){
         this.s_Swerve = swerve;
         autoFactory = new AutoFactory(
-            s_Swerve::getPoseRaw,
+            s_Swerve::getEstimatedPose,
             s_Swerve::resetPose,
             s_Swerve::followChoreoTraj,
             true,
@@ -41,6 +41,9 @@ public class Autos {
         final AutoTrajectory trajectory = routine.trajectory(name);
         if(trajectory.getInitialPose().isPresent()){
             s_Swerve.feedInitialPose(trajectory.getInitialPose().get());
+            s_Swerve.resetPose(trajectory.getInitialPose().get());
+            s_Swerve.resetPoseEstimator(trajectory.getInitialPose().get());
+            
         }
         else{
             s_Swerve.feedInitialPose(new Pose2d());

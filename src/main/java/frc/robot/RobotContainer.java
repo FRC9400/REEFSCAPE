@@ -34,7 +34,7 @@ public class RobotContainer {
   
     public RobotContainer() {
     swerve.zeroWheels();
-    swerve.resetGyro(0);
+    swerve.resetGyro(0); //zeroes quest as well
     swerve.setDefaultCommand(
         new TeleopSwerve(
             swerve, 
