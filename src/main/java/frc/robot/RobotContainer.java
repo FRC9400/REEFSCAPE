@@ -38,7 +38,7 @@ public class RobotContainer {
     private final LEDs s_leds = new LEDs();
     private final FunnelIO s_funnel = new FunnelIOTalonFX();
     //private final Intake intake = new Intake(new IntakeIOTalonFX());
-    private final BeamBreakIO beamBreak = new BeamBreakIOAdafruit(6, false);
+    private final BeamBreakIO beamBreak = new BeamBreakIOAdafruit(6, true);
     private final Superstructure superstructure = new Superstructure(s_dealgae, s_elevator, s_endeffector, s_leds, s_funnel, beamBreak);
     private final Swerve swerve = new Swerve();
 
@@ -72,14 +72,11 @@ public class RobotContainer {
         driver.rightBumper()
             .onTrue(new InstantCommand(() -> superstructure.requestElevatorDown()));
         
-        driver.rightTrigger()
-            .onTrue(new InstantCommand(() -> superstructure.requestProcessor()));
-        
         driver.leftBumper()
-            .onTrue(new InstantCommand(() -> superstructure.requestScore()));
+            .onTrue(new InstantCommand(() -> superstructure.executePurple()));
         
         driver.leftTrigger()
-            .onTrue(new InstantCommand(() -> superstructure.requestDealgae()));
+            .onTrue(new InstantCommand(() -> superstructure.executeGreen()));
 
         operator.rightTrigger()
             .onTrue(new InstantCommand(() -> superstructure.requestIdle()));
@@ -96,9 +93,6 @@ public class RobotContainer {
         operator.b()
             .onTrue(new InstantCommand(() -> superstructure.setL4()));
         
-        driver.a()
-            .onTrue(new InstantCommand(() -> superstructure.requestIntake()));
-        
         /*driver.x()
             .onTrue(intake.runSysIdCmd());
         
@@ -106,9 +100,6 @@ public class RobotContainer {
             .onTrue(new InstantCommand(() -> intake.requestMotionMagic(pivotDegrees.get())));*/
         
     }
-
-
-
 
     public Swerve getSwerve(){
         return swerve;
