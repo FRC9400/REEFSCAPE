@@ -272,7 +272,54 @@ public void periodic(){
     Logger.recordOutput("Swerve/FailedDaqs", FailedDaqs);
 
 }
+public void requestDesiredState(double x_speed, double y_speed, double rot_speed, boolean fieldRelative, boolean isOpenLoop){
 
+    Rotation2d[] steerPositions = new Rotation2d[4];
+    SwerveModuleState[] desiredModuleStates = new SwerveModuleState[4];
+    for (int i = 0; i < 4; i++) {
+        steerPositions[i] = Modules[i].getPosition(false).angle;
+    }
+    Rotation2d gyroPosition = heading;
+    if (fieldRelative && isOpenLoop){
+        desiredModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
+            x_speed,
+            y_speed,
+            rot_speed,
+            gyroPosition));
+        kinematics.desaturateWheelSpeeds(setpointModuleStates, 12);
+        for (int i = 0; i < 4; i++) {
+            setpointModuleStates[i] =  SwerveModuleState.optimize(desiredModuleStates[i], steerPositions[i]);
+            Modules[i].setDesiredState(setpointModuleStates[i], true);
+        }
+    }
+    else if(fieldRelative && !isOpenLoop){
+        desiredModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
+            x_speed,
+            y_speed,
+            rot_speed,
+            gyroPosition));
+        kinematics.desaturateWheelSpeeds(setpointModuleStates, swerveConstants.moduleConstants.maxSpeedMeterPerSecond);
+        for (int i = 0; i < 4; i++) {
+            setpointModuleStates[i] =  SwerveModuleState.optimize(desiredModuleStates[i], steerPositions[i]);
+            Modules[i].setDesiredState(setpointModuleStates[i], false);
+        }
+    }
+    else if(!fieldRelative && !isOpenLoop){
+        desiredModuleStates = kinematics.toSwerveModuleStates(new ChassisSpeeds(
+            x_speed,
+            y_speed,
+            rot_speed
+            ));
+        kinematics.desaturateWheelSpeeds(setpointModuleStates, swerveConstants.moduleConstants.maxSpeedMeterPerSecond);
+        for (int i = 0; i < 4; i++) {
+            setpointModuleStates[i] =  SwerveModuleState.optimize(desiredModuleStates[i], steerPositions[i]);
+            Modules[i].setDesiredState(setpointModuleStates[i], false);
+        }
+    }
+    
+}
+
+/* 
 public void requestDesiredState(double x_speed, double y_speed, double rot_speed, boolean fieldRelative, boolean isOpenLoop){
     Rotation2d gyroPosition = new Rotation2d(m_heading.getValueAsDouble() * Math.PI * 2);
     if (fieldRelative && isOpenLoop){
@@ -309,7 +356,7 @@ public void requestDesiredState(double x_speed, double y_speed, double rot_speed
         }
     }
     
-}
+}*/
 public void feedInitialPose(Pose2d intialPose){
     this.initialPose = initialPose;
     initialPoseFed = true;

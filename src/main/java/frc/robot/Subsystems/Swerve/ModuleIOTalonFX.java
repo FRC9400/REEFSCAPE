@@ -228,7 +228,23 @@ public class ModuleIOTalonFX{
     return new SwerveModuleState(Conversions.RPStoMPS(m_driveVelocity.getValueAsDouble(), swerveConstants.moduleConstants.wheelCircumferenceMeters, swerveConstants.moduleConstants.driveGearRatio), m_internalState.angle);
   }
 
+  public void setDesiredState(SwerveModuleState optimizedDesiredStates, boolean isOpenLoop) {
+    if(isOpenLoop){
+        double driveVoltage = optimizedDesiredStates.speedMetersPerSecond * 7 ;
+        double angleDeg = optimizedDesiredStates.angle.getDegrees();
 
+        setDriveVoltage(driveVoltage);
+        setTurnAngle(angleDeg);
+    }
+    else if(!isOpenLoop){
+        double driveVelocity = optimizedDesiredStates.speedMetersPerSecond;
+        double angleDeg = optimizedDesiredStates.angle.getDegrees();
+
+        setDriveVelocity(driveVelocity);
+        setTurnAngle(angleDeg);
+    }
+}
+/* 
     public void setDesiredState(SwerveModuleState desiredState, boolean isOpenLoop, boolean TorqueFOC) {
         desiredState.optimize( m_internalState.angle);
         double steerMotorErrorRotations = desiredState.angle.getRotations() - m_internalState.angle.getRotations();
@@ -259,7 +275,7 @@ public class ModuleIOTalonFX{
             setTurnAngle(angleDeg);
         }
     }
-
+*/
     public void setDriveVoltage(double volts) {
         driveMotor.setControl(driveVoltageRequest.withOutput(volts));
     }
