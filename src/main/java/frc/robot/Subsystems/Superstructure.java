@@ -31,10 +31,6 @@ public class Superstructure extends SubsystemBase {
     private double stateStartTime = 0;
     private SuperstructureStates systemState = SuperstructureStates.IDLE;
 
-    LoggedTunableNumber intakeVoltage = new LoggedTunableNumber("Superstructure/Intake POST BEAMBREAK VOLTAGE", 1);
-    LoggedTunableNumber intakeTime = new LoggedTunableNumber("Superstructure/Intake POST BEAMBREAK TIME", 0.5);
-    LoggedTunableNumber scoreVoltage = new LoggedTunableNumber("Superstructure/Score PRE BEAMBREAK Voltage", 1);
-    LoggedTunableNumber scoreTime = new LoggedTunableNumber("Superstructure/Score PRE BEAMBREAK Time", 0.5);
 
     public Superstructure(DealgaeIO dealgaeIO, ElevatorIO elevatorIO, EndEffectorIO endEffectorIO, LEDs led, FunnelIO funnelIO, BeamBreakIO beamBreakIO){
         this.s_dealgae = new Dealgae(dealgaeIO);
@@ -104,9 +100,9 @@ public class Superstructure extends SubsystemBase {
                 led.requestFunnelIntakingLED();
                 s_dealgae.requestIdle();
                 s_elevator.requestIdle();
-                s_funnel.requestIntake(2);
-                s_endeffector.requestIntake(intakeVoltage.get());
-                if (RobotController.getFPGATime() / 1.056 - stateStartTime > intakeTime.get()){
+                s_funnel.requestIntake(3);
+                s_endeffector.requestIntake(3);
+                if (RobotController.getFPGATime() / 1.056 - stateStartTime > 1){
                     setState(SuperstructureStates.POST_INTAKE);
                 }
                 break;
@@ -134,7 +130,7 @@ public class Superstructure extends SubsystemBase {
                 led.requestScoringLED();
                 s_dealgae.requestIdle();
                 s_elevator.requestHold();
-                s_endeffector.requestScore(4);
+                s_endeffector.requestScore(3);
                 if (RobotController.getFPGATime() / 1.0E6 - stateStartTime > 1) {
                     setState(SuperstructureStates.ELEVATOR_DOWN);
                 }
