@@ -43,6 +43,8 @@ public class SnapToPose extends Command{
 
     public enum ScoringPosts{
         NOT_SCORING,
+        LEFT_SOURCE,
+        RIGHT_SOURCE,
         A,
         B,
         C,
@@ -73,6 +75,10 @@ public class SnapToPose extends Command{
         switch(targetPost){
             case NOT_SCORING:
                 this.goalPose = new Pose2d();
+            case LEFT_SOURCE:
+                this.goalPose = new Pose2d(0.6543587446212769, 6.804286956787109, new Rotation2d(-0.938047201237074));
+            case RIGHT_SOURCE:
+                this.goalPose = new Pose2d(1.4565401077270508, 0.6411857008934021, new Rotation2d(0.9380476238634191));
             case A:
                 this.goalPose = new Pose2d(3.256556749343872, 4.202088832855225, new Rotation2d(0));
             case B: 
@@ -157,9 +163,10 @@ public class SnapToPose extends Command{
         //units are in meters?
         double closest = 100;
         double bounds = 0.95;
+        double intakingBounds = 1;
         int index = 0;
-        // front, front left, front right, back, back left, back right
-        Translation2d[] translations = {new Translation2d(3.2714266777038574, 4.0053911209106445), new Translation2d(3.8826496601104736, 5.082531929016113), new Translation2d(3.863084316253662, 2.9499034881591797), new Translation2d(5.721797466278076, 4.0053911209106445), new Translation2d(5.095704555511475, 5.082531929016113), new Translation2d(5.095704555511475, 2.969468832015991)};
+        // front, front left, front right, back, back left, back right, left source, right source
+        Translation2d[] translations = {new Translation2d(3.2714266777038574, 4.0053911209106445), new Translation2d(3.8826496601104736, 5.082531929016113), new Translation2d(3.863084316253662, 2.9499034881591797), new Translation2d(5.721797466278076, 4.0053911209106445), new Translation2d(5.095704555511475, 5.082531929016113), new Translation2d(5.095704555511475, 2.969468832015991), new Translation2d(0.6543587446212769, 6.804286956787109), new Translation2d(1.4565401077270508, 0.6411857008934021)};
 
         for(int i = 0; i < translations.length; i++){
             double distance = Math.hypot(startingPose.getX() - translations[i].getX(), startingPose.getY() - translations[i].getY());
@@ -168,7 +175,13 @@ public class SnapToPose extends Command{
                 index = i;
             }
         }
-        if(closest > bounds){
+        if (index == 6 || index == 7) {
+            if (closest > intakingBounds) {
+                return (index == 6) ? ScoringPosts.LEFT_SOURCE : ScoringPosts.RIGHT_SOURCE;
+            }
+            return ScoringPosts.NOT_SCORING;
+        }
+        else if(closest > bounds ){
             return ScoringPosts.NOT_SCORING;
         }
         else if(RobotContainer.selectedNode.equals("left")){
@@ -190,6 +203,7 @@ public class SnapToPose extends Command{
             else if(index == 5){
                 return ScoringPosts.F;
             }
+            
         }
         else if(RobotContainer.selectedNode.equals("right")){
             if(index == 0){
