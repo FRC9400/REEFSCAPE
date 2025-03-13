@@ -82,7 +82,7 @@ public class Swerve extends SubsystemBase{
     Pose2d rawQuestPose;
     Pose2d initialPose = new Pose2d();
     boolean initialPoseFed = false;
-    Transform2d questToRobot = new Transform2d(new Translation2d(0.0135382, 0.2794), new Rotation2d(Math.PI/2));
+    Transform2d questToRobot = new Transform2d(new Translation2d(0.0135382, 0.2794), new Rotation2d(0));
     private QuestNav questNav = new QuestNav();
     Pigeon2 pigeon = new Pigeon2(canIDConstants.pigeon, "canivore");
     private StatusSignal<Angle> m_heading = pigeon.getYaw();
@@ -383,6 +383,7 @@ public Pose2d getEstimatedPose(){
 public void resetGyro(double yawDeg){
     pigeon.setYaw(yawDeg);
     questNav.zeroHeading();
+    questNav.zeroPosition();
 }
 
 public void resetPoseEstimator(Pose2d pose){

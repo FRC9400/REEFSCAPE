@@ -31,6 +31,7 @@ import frc.robot.Commands.TeleopSwerve;
 public class RobotContainer {
     public static final CommandXboxController driver = new CommandXboxController(0);
     public static final CommandXboxController operator = new CommandXboxController(1);
+    public static String selectedNode = "left";
     
     private final DealgaeIO s_dealgae = new DealgaeIOTalonFX();
     private final EndEffectorIO s_endeffector = new EndEffectorIOTalonFX();
@@ -96,6 +97,10 @@ public class RobotContainer {
         operator.b()
             .onTrue(new InstantCommand(() -> superstructure.setL4()));
         
+        operator.leftBumper().onTrue(new InstantCommand(() -> setNode("left")));
+        operator.rightBumper().onTrue(new InstantCommand(() -> setNode("right")));
+        operator.leftTrigger().onTrue(new InstantCommand(() -> setNode("middle")));
+        
         /*driver.x()
             .onTrue(intake.runSysIdCmd());
         
@@ -110,6 +115,18 @@ public class RobotContainer {
 
     public Superstructure getSuperstructure(){
         return superstructure;
+    }
+
+    public void setNode(String direction){
+        if(direction.equals("left")){
+            selectedNode = "left";
+        }
+        else if (direction.equals("middle")){
+            selectedNode = "middle";
+        }
+        else{
+            selectedNode = "right";
+        }
     }
 
 }

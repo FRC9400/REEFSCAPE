@@ -86,7 +86,7 @@ public class QuestNav {
 
   private Translation2d getQuestNavTranslation() {
     float[] questnavPosition = questPosition.get();
-    return new Translation2d(questnavPosition[2], -questnavPosition[0]);
+    return new Translation2d(-questnavPosition[0], questnavPosition[2]);
   }
 
   private Pose2d getQuestNavPose() {
