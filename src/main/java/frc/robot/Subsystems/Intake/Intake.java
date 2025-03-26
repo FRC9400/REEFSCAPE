@@ -42,7 +42,7 @@ public class Intake{
                 intakeIO.requestRollerVoltage(0);
                 break;
             case SETPOINT:
-                intakeIO.requestMotionMagic(0);
+                intakeIO.requestMotionMagic(pivotSetpoint);
                 intakeIO.requestRollerVoltage(0);
             case INTAKE:
                 intakeIO.requestMotionMagic(pivotSetpoint);
@@ -62,7 +62,8 @@ public class Intake{
         setState(IntakeStates.IDLE);
     }
 
-    public void requestSetpoint(){
+    public void requestSetpoint(double degrees){
+        pivotSetpoint = degrees;
         setState(IntakeStates.SETPOINT);
     }
 

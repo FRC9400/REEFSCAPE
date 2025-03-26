@@ -61,6 +61,8 @@ public class RobotContainer {
 
     private void configureBindings() {
 
+        driver.b().onTrue(new InstantCommand(() -> superstructure.requestGroundSetpoint()));
+
         driver.start()
             .onTrue(new InstantCommand(() -> superstructure.requestIdle()));
         

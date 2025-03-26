@@ -40,7 +40,7 @@ public class Superstructure extends SubsystemBase {
     private boolean hasAlgae = false;
     private boolean hasCoral = false;
 
-    LoggedTunableNumber setpoint = new LoggedTunableNumber("Setpoint", 0.1);
+    LoggedTunableNumber setpoint = new LoggedTunableNumber("Superstructure Ground Intake Setpoint", 0);
 
     private double stateStartTime = 0;
     private SuperstructureStates systemState = SuperstructureStates.IDLE;
@@ -75,7 +75,8 @@ public class Superstructure extends SubsystemBase {
         GROUND_INTAKE_CORAL,
         GROUND_INTAKE_ALGAE,
         GROUND_SCORE_CORAL,
-        GROUND_PRCOESS_ALGAE
+        GROUND_PRCOESS_ALGAE,
+        GROUND_SETPOINT
     }
 
     @Override
@@ -114,7 +115,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 break;
             case INTAKE_A:
@@ -128,7 +129,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (isBeamBroken()){
                     setState(SuperstructureStates.INTAKE_B);
@@ -145,7 +146,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (!isBeamBroken()){
                     setState(SuperstructureStates.INTAKE_C);
@@ -162,7 +163,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (isBeamBroken()){
                     setState(SuperstructureStates.POST_INTAKE);
@@ -179,7 +180,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (!isBeamBroken()){
                     setState(SuperstructureStates.INTAKE_C);
@@ -197,7 +198,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 break;
             case SCORE_A:
@@ -211,7 +212,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (s_elevator.atSetpoint()){
                     setState(SuperstructureStates.SCORE_B);
@@ -227,7 +228,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (RobotController.getFPGATime() / 1.0E6 - stateStartTime > 1) {
                     setState(SuperstructureStates.ELEVATOR_DOWN);
@@ -243,7 +244,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (s_elevator.atSetpoint()){
                     setState(SuperstructureStates.DEALGAE_B);
@@ -259,7 +260,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (s_dealgae.getDealgaeCurrent() > 27 && RobotController.getFPGATime() / 1.0E6 - stateStartTime > 0.5){
                     setState(SuperstructureStates.DEALGAED);
@@ -275,7 +276,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (s_elevator.atSetpoint()){
                     setState(SuperstructureStates.IDLE);
@@ -291,7 +292,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (RobotController.getFPGATime() / 1.0E6 - stateStartTime > 1) {
                     setState(SuperstructureStates.IDLE);
@@ -315,7 +316,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (s_elevator.atSetpoint()){
                     setState(SuperstructureStates.ELEVATOR_DOWN_B);
@@ -339,7 +340,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if (s_elevator.atSetpoint()){
                     setState(SuperstructureStates.IDLE);
@@ -355,7 +356,7 @@ public class Superstructure extends SubsystemBase {
                 } else if (hasAlgae = true){
                     s_intake.requestHoldAlgae();
                 } else {
-                    s_intake.requestSetpoint();
+                    s_intake.requestSetpoint(0);
                 }
                 if(RobotController.getFPGATime() / 1.056 - stateStartTime > 7){
                     setState(SuperstructureStates.IDLE);
@@ -409,6 +410,13 @@ public class Superstructure extends SubsystemBase {
                     setState(SuperstructureStates.IDLE);
                 }
                 break;
+            case GROUND_SETPOINT:
+                s_dealgae.requestIdle();
+                s_elevator.requestIdle();
+                s_funnel.requestIdle();
+                s_endeffector.requestIdle();
+                s_intake.requestSetpoint(setpoint.get());
+                break;
             default:
                 break;
         }
@@ -420,6 +428,10 @@ public class Superstructure extends SubsystemBase {
 
     public void requestScore(){
         setState(SuperstructureStates.SCORE_A);
+    }
+
+    public void requestGroundSetpoint(){
+        setState(SuperstructureStates.GROUND_SETPOINT);
     }
 
     public void requestGroundIntakeCoral(){
