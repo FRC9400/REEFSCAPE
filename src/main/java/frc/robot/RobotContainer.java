@@ -20,6 +20,7 @@ import frc.robot.Subsystems.EndEffector.EndEffectorIOTalonFX;
 import frc.robot.Subsystems.Funnel.FunnelIO;
 import frc.robot.Subsystems.Funnel.FunnelIOTalonFX;
 import frc.robot.Subsystems.Intake.Intake;
+import frc.robot.Subsystems.Intake.IntakeIO;
 import frc.robot.Subsystems.Intake.IntakeIOTalonFX;
 import frc.robot.Subsystems.LEDs.LEDs;
 import frc.robot.Subsystems.Swerve.FeedDriveAssist;
@@ -30,16 +31,15 @@ import frc.robot.Commands.TeleopSwerve;
 public class RobotContainer {
     public static final CommandXboxController driver = new CommandXboxController(0);
     public static final CommandXboxController operator = new CommandXboxController(1);
-    
-    private final Intake intake = new Intake(new IntakeIOTalonFX());
-    
+        
     private final DealgaeIO s_dealgae = new DealgaeIOTalonFX();
     private final EndEffectorIO s_endeffector = new EndEffectorIOTalonFX();
     private final ElevatorIO s_elevator = new ElevatorIOTalonFX();
     private final LEDs s_leds = new LEDs();
     private final FunnelIO s_funnel = new FunnelIOTalonFX();
     private final BeamBreakIO beamBreak = new BeamBreakIOAdafruit(6, true);
-    private final Superstructure superstructure = new Superstructure(s_dealgae, s_elevator, s_endeffector, s_leds, s_funnel, beamBreak);
+    private final IntakeIO s_intake = new IntakeIOTalonFX();
+    private final Superstructure superstructure = new Superstructure(s_dealgae, s_elevator, s_endeffector, s_leds, s_funnel, s_intake, beamBreak);
     private final Swerve swerve = new Swerve();
   
     public RobotContainer() {
@@ -60,8 +60,6 @@ public class RobotContainer {
     }
 
     private void configureBindings() {
-
-        driver.b().onTrue(intake.runSysIdCmd());
 
         driver.start()
             .onTrue(new InstantCommand(() -> superstructure.requestIdle()));
