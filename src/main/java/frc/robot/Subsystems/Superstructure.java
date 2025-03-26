@@ -68,8 +68,6 @@ public class Superstructure extends SubsystemBase {
         DEALGAE_A,
         DEALGAE_B,
         DEALGAED,
-        HOLD_ALGAE,
-        HOLD_CORAL,
         PROCESSOR,
         ELEVATOR_DOWN,
         ELEVATOR_DOWN_B,
@@ -280,20 +278,7 @@ public class Superstructure extends SubsystemBase {
                     s_intake.requestSetpoint();
                 }
                 if (s_elevator.atSetpoint()){
-                    setState(SuperstructureStates.HOLD_ALGAE);
-                }
-                break;
-            case HOLD_ALGAE: // this cancels
-                led.requestDealgaedLED();
-                s_dealgae.requestIdle();
-                s_elevator.requestIdle();
-                s_endeffector.requestHoldAlgae(0.5);
-                if (hasCoral == true){
-                    s_intake.requestHoldCoral();
-                } else if (hasAlgae = true){
-                    s_intake.requestHoldAlgae();
-                } else {
-                    s_intake.requestSetpoint();
+                    setState(SuperstructureStates.IDLE);
                 }
                 break;
             case PROCESSOR:
@@ -383,6 +368,8 @@ public class Superstructure extends SubsystemBase {
                 s_endeffector.requestIdle();
                 s_intake.requestIntakeCoral();
                 if(RobotController.getFPGATime() / 1.056 - stateStartTime > 0.5 && s_intake.getRollerCurrent() > 26){
+                    hasCoral = true;
+                    hasAlgae = false;
                     setState(SuperstructureStates.IDLE);
                 }
                 break;
@@ -393,6 +380,8 @@ public class Superstructure extends SubsystemBase {
                 s_endeffector.requestIdle();
                 s_intake.requestIntakeAlgae();
                 if(RobotController.getFPGATime() / 1.056 - stateStartTime > 0.5 && s_intake.getRollerCurrent() > 26){
+                    hasAlgae = true;
+                    hasCoral = false;
                     setState(SuperstructureStates.IDLE);
                 }
                 break;
@@ -402,7 +391,9 @@ public class Superstructure extends SubsystemBase {
                 s_funnel.requestIdle();
                 s_endeffector.requestIdle();
                 s_intake.requestScoreCoral();
-                if(RobotController.getFPGATime() / 1.056 - stateStartTime > 2){
+                if(RobotController.getFPGATime() / 1.056 - stateStartTime > 3){
+                    hasCoral = false;
+                    hasAlgae = false;
                     setState(SuperstructureStates.IDLE);
                 }
                 break;
@@ -412,7 +403,9 @@ public class Superstructure extends SubsystemBase {
                 s_funnel.requestIdle();
                 s_endeffector.requestIdle();
                 s_intake.requestPrcoessAlgae();
-                if(RobotController.getFPGATime() / 1.056 - stateStartTime > 2){
+                if(RobotController.getFPGATime() / 1.056 - stateStartTime > 3){
+                    hasAlgae = false;
+                    hasCoral = false;
                     setState(SuperstructureStates.IDLE);
                 }
                 break;
