@@ -91,6 +91,8 @@ public class IntakeIOTalonFX implements IntakeIO {
         rollerConfigs.MotorOutput.Inverted = intakeConstants.rollerInvert;
 
         rollerMotor.getConfigurator().apply(rollerConfigs);
+
+        pivotConfiguration();
         
         /* Set Frequency */
         BaseStatusSignal.setUpdateFrequencyForAll(
