@@ -5,17 +5,13 @@ import static edu.wpi.first.units.Units.Volts;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.littletonrobotics.junction.Logger;
-
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.hardware.Pigeon2;
-
 import choreo.trajectory.SwerveSample;
-
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
@@ -26,53 +22,28 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-import frc.commons.LoggedTunableNumber;
+import frc.commons.VisionUpdate;
 import frc.robot.Constants.canIDConstants;
 import frc.robot.Constants.swerveConstants;
 import frc.robot.Constants.swerveConstants.kinematicsConstants;
 
-/*
- * Changes
- * Removed zero wheels /
- * Gyro added / 
- * Added Odometry Thread class, synchronoulsy wait for signals/
- * Retained logging swervemodulestates and pose /
- * Added Oculus pose /
- * offset oculus pose / 
- * 
- * To do
- * add opi stuff (yikes!)
- * does this even work????
- * fused pose with quest, quest updates visionmeasurement at 50 hz (quest updates at 120) odom updates at 250hz /
- * figure how to ingegrate profiled pid
- * tuning stdevs
- */
-
 public class Swerve extends SubsystemBase{
-    SwerveDrivePoseEstimator poseEstimator;
-    ProfiledPIDController controller = new ProfiledPIDController(0, 0, 0, null); //create pose constants
-    Matrix<N3, N1> visionSTDevs = VecBuilder.fill(0, 0,0); //
+    Vision vision = new Vision();
+    VisionUpdate latestVisionUpdate;
+    public SwerveDrivePoseEstimator poseEstimator;
     Matrix<N3, N1> stateSTDevs = VecBuilder.fill(0, 0, 0); // how to tune how to tune
-    Pose2d transformedQuestPose;
-    Pose2d rawQuestPose;
-    Pose2d initialPose = new Pose2d();
-    boolean initialPoseFed = false;
-    Transform2d questToRobot = new Transform2d(new Translation2d(0.0135382, 0.2794), new Rotation2d(Math.PI/2));
-    private QuestNav questNav = new QuestNav();
     Pigeon2 pigeon = new Pigeon2(canIDConstants.pigeon, "canivore");
     private StatusSignal<Angle> m_heading = pigeon.getYaw();
     private StatusSignal<AngularVelocity> m_angularVelocity = pigeon.getAngularVelocityZDevice();
@@ -82,6 +53,8 @@ public class Swerve extends SubsystemBase{
         kinematicsConstants.BR);
     OdometryThread m_OdometryThread;
     BaseStatusSignal[] m_allSignals;
+    Timer timer = new Timer();
+    double collisionTimestamp = 0;
 
     private final PIDController xController = new PIDController(4.6,0,0.023);
     private final PIDController yController = new PIDController(4.205,0,0.015);
@@ -189,19 +162,16 @@ public class Swerve extends SubsystemBase{
                     currentModuleStates[i] = Modules[i].getState();
                   }
                   heading =
-                  new Rotation2d(m_heading.getValueAsDouble() * Math.PI/180.0);
+                  new Rotation2d(m_heading.getValueAsDouble() * Math.PI/180.0); //need to add latency compesnation
 
-                  odometry.update(heading, currentModulePositions); //update odoemtry threa
-                  rawQuestPose = new Pose2d(questNav.getPose().getTranslation(), questNav.getPose().getRotation().unaryMinus());
-                  transformedQuestPose = transformQuestPose(new Transform2d(initialPose.getTranslation(), initialPose.getRotation()));
-                  poseEstimator.update(heading, currentModulePositions);
+                  odometry.update(heading, currentModulePositions); //update odoemtry thread
+                  poseEstimator.update(heading, currentModulePositions); //add timestamp?
                 
             }
     }
     
 }
 public Swerve() {
-    // initialPose = getVisionPose()
     Modules[0] = new ModuleIOTalonFX(canIDConstants.driveMotor[0], canIDConstants.steerMotor[0], canIDConstants.CANcoder[0],swerveConstants.moduleConstants.CANcoderOffsets[0],
     swerveConstants.moduleConstants.driveMotorInverts[0], swerveConstants.moduleConstants.steerMotorInverts[0], swerveConstants.moduleConstants.CANcoderInverts[0]);
 
@@ -221,8 +191,6 @@ public Swerve() {
     }
 
     poseRaw = new Pose2d();
-    transformedQuestPose = questNav.getPose();
-    rawQuestPose = questNav.getPose();
     Speeds = new ChassisSpeeds();
     currentModuleStates = new SwerveModuleState[4];
     setpointModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
@@ -236,86 +204,59 @@ public Swerve() {
         Modules[i].setDriveBrakeMode(true);
         Modules[i].setTurnBrakeMode(false);
     }
+    latestVisionUpdate = vision.getVisionUpdate().isPresent() ? vision.getVisionUpdate().get() : new VisionUpdate();
 
     m_OdometryThread = new OdometryThread();
     m_OdometryThread.start();
     odometry = new SwerveDriveOdometry(kinematics, pigeon.getRotation2d(),
         currentModulePositions); 
-    poseEstimator = new SwerveDrivePoseEstimator(kinematics, heading, currentModulePositions, initialPose);
-
+    poseEstimator = new SwerveDrivePoseEstimator(kinematics, heading, currentModulePositions, latestVisionUpdate.pose, VecBuilder.fill(0.1, 0.1, 0.1), latestVisionUpdate.stdDevs);
+    thetaController.enableContinuousInput(-Math.PI, Math.PI);
+    timer.start();
   }
 
 
 @Override
 public void periodic(){
+    /* 
+    if(checkCollision()){
+        poseEstimator = new SwerveDrivePoseEstimator(kinematics, heading, currentModulePositions, poseRaw, VecBuilder.fill(9400, 9400, 9400), latestVisionUpdate.stdDevs);
+        collisionTimestamp = timer.get();
+    else if(checkSkid()){
+        poseEstimator = new SwerveDrivePoseEstimator(kinematics, heading, currentModulePositions, poseRaw, VecBuilder.fill(0.5, 0.5, 0.5), latestVisionUpdate.stdDevs);
+        collisionTimestamp = timer.get();
+    }
+    }else if(timer.get() - collisionTimestamp > 0.5){
+        poseEstimator = new SwerveDrivePoseEstimator(kinematics, heading, currentModulePositions, poseRaw, VecBuilder.fill(0.1, 0.1, 0.1), latestVisionUpdate.stdDevs);
+    }
+    */
+
+    if(vision.getVisionUpdate().isPresent()){
+    latestVisionUpdate = vision.getVisionUpdate().get();
+    poseEstimator.setVisionMeasurementStdDevs(latestVisionUpdate.stdDevs);
+    poseEstimator.addVisionMeasurement(latestVisionUpdate.pose, latestVisionUpdate.timestamp);}
+
     Logger.recordOutput("Swerve/GyroDeg", m_heading.getValueAsDouble());
-    poseEstimator.addVisionMeasurement(transformedQuestPose, questNav.timestamp()); //units? should i be update pose estimator in periodic instead? 250hz vs 120hz
     for (int i = 0; i < 4; i++){
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]DriveStator", Modules[i].getCurrentSignals()[0].getValueAsDouble());
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]DriveSupply", Modules[i].getCurrentSignals()[1].getValueAsDouble());
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]SteerStator", Modules[i].getCurrentSignals()[2].getValueAsDouble());
         Logger.recordOutput("Swerve/Module/ModuleNum[" + i + "]AbsoluteAngle", Modules[i].getCurrentSignals()[3].getValueAsDouble());
     }
-    logModuleStates("SwerveModuleStates/MeasuredStates", currentModuleStates);
-    logModuleStates("SwerveModuleStates/DesiredStates", setpointModuleStates);
-    Logger.recordOutput("FusedPose", poseEstimator.getEstimatedPosition());
-    Logger.recordOutput("InitialPoseFed", initialPoseFed);
-    Logger.recordOutput("InitialPose", initialPose);
-    Logger.recordOutput("TransformedOculusPosituion", transformedQuestPose);
-    Logger.recordOutput("RawOculusPosituion", rawQuestPose);
-    Logger.recordOutput("Odometry/PoseRaw", odometry.getPoseMeters());
+
+    logModuleStates("Swerve/SwerveModuleStates/MeasuredStates", currentModuleStates);
+    logModuleStates("Swerve/SwerveModuleStates/DesiredStates", setpointModuleStates);
+    Logger.recordOutput("Swerve/Pose/FusedPose", poseEstimator.getEstimatedPosition());
+    Logger.recordOutput("Swerve/Pose/Odometry", odometry.getPoseMeters());
+    Logger.recordOutput("Swerve/Pose/VisionPose", latestVisionUpdate.pose);
+    Logger.recordOutput("Swerve/Pose/Timestamp", latestVisionUpdate.timestamp);
+    Logger.recordOutput("Swerve/Pose/visionStdevs", latestVisionUpdate.stdDevs);
     Logger.recordOutput("Swerve/SuccessfulDaqs", SuccessfulDaqs);
     Logger.recordOutput("Swerve/FailedDaqs", FailedDaqs);
 
 }
-public void requestDesiredState(double x_speed, double y_speed, double rot_speed, boolean fieldRelative, boolean isOpenLoop){
 
-    Rotation2d[] steerPositions = new Rotation2d[4];
-    SwerveModuleState[] desiredModuleStates = new SwerveModuleState[4];
-    for (int i = 0; i < 4; i++) {
-        steerPositions[i] = Modules[i].getPosition(false).angle;
-    }
-    Rotation2d gyroPosition = heading;
-    if (fieldRelative && isOpenLoop){
-        desiredModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
-            x_speed,
-            y_speed,
-            rot_speed,
-            gyroPosition));
-        kinematics.desaturateWheelSpeeds(setpointModuleStates, swerveConstants.moduleConstants.maxSpeedMeterPerSecond);
-        for (int i = 0; i < 4; i++) {
-            setpointModuleStates[i] =  SwerveModuleState.optimize(desiredModuleStates[i], steerPositions[i]);
-            Modules[i].setDesiredState(setpointModuleStates[i], true);
-        }
-    }
-    else if(fieldRelative && !isOpenLoop){
-        desiredModuleStates = kinematics.toSwerveModuleStates(ChassisSpeeds.fromFieldRelativeSpeeds(
-            x_speed,
-            y_speed,
-            rot_speed,
-            gyroPosition));
-        kinematics.desaturateWheelSpeeds(setpointModuleStates, swerveConstants.moduleConstants.maxSpeedMeterPerSecond);
-        for (int i = 0; i < 4; i++) {
-            setpointModuleStates[i] =  SwerveModuleState.optimize(desiredModuleStates[i], steerPositions[i]);
-            Modules[i].setDesiredState(setpointModuleStates[i], false);
-        }
-    }
-    else if(!fieldRelative && !isOpenLoop){
-        desiredModuleStates = kinematics.toSwerveModuleStates(new ChassisSpeeds(
-            x_speed,
-            y_speed,
-            rot_speed
-            ));
-        kinematics.desaturateWheelSpeeds(setpointModuleStates, swerveConstants.moduleConstants.maxSpeedMeterPerSecond);
-        for (int i = 0; i < 4; i++) {
-            setpointModuleStates[i] =  SwerveModuleState.optimize(desiredModuleStates[i], steerPositions[i]);
-            Modules[i].setDesiredState(setpointModuleStates[i], false);
-        }
-    }
-    
-}
 
-/* 
 public void requestDesiredState(double x_speed, double y_speed, double rot_speed, boolean fieldRelative, boolean isOpenLoop){
     Rotation2d gyroPosition = new Rotation2d(m_heading.getValueAsDouble() * Math.PI * 2);
     if (fieldRelative && isOpenLoop){
@@ -352,18 +293,24 @@ public void requestDesiredState(double x_speed, double y_speed, double rot_speed
         }
     }
     
-}*/
-public void feedInitialPose(Pose2d intialPose){
-    this.initialPose = initialPose;
-    initialPoseFed = true;
 }
+
+/* 
+public boolean checkSkid(){
+
+}
+
+public boolean checkCollision(){
+
+}
+*/
+
 public Pose2d getEstimatedPose(){
     return poseEstimator.getEstimatedPosition();
 }
 
 public void resetGyro(double yawDeg){
     pigeon.setYaw(yawDeg);
-    questNav.zeroHeading();
 }
 
 public void resetPoseEstimator(Pose2d pose){
@@ -457,10 +404,14 @@ public void zeroWheels(){
     }
 }
 
-public Pose2d transformQuestPose(Transform2d initialPoseOffset){
-    Pose2d TransformedQuestPose= this.rawQuestPose.transformBy(questToRobot).transformBy(initialPoseOffset);
-    return TransformedQuestPose;
-   
+public void followChoreoTraj(SwerveSample sample) {
+    ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(new ChassisSpeeds(
+        sample.vx + xController.calculate(odometry.getPoseMeters().getX(), sample.x),
+        sample.vy + yController.calculate(odometry.getPoseMeters().getY(), sample.y),
+        sample.omega + thetaController.calculate(odometry.getPoseMeters().getRotation().getRadians(), sample.heading)
+    ), odometry.getPoseMeters().getRotation()
+    );
+    driveRobotRelative(speeds);
 }
 
 private void logModuleStates(String key, SwerveModuleState[] states) {
@@ -470,15 +421,5 @@ private void logModuleStates(String key, SwerveModuleState[] states) {
         dataArray.add(states[i].speedMetersPerSecond);
     }
     Logger.recordOutput(key, dataArray.stream().mapToDouble(Double::doubleValue).toArray());
-}
-
-public void followChoreoTraj(SwerveSample sample) {
-    ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(new ChassisSpeeds(
-        sample.vx + xController.calculate(odometry.getPoseMeters().getX(), sample.x),
-        sample.vy + yController.calculate(odometry.getPoseMeters().getY(), sample.y),
-        sample.omega + thetaController.calculate(odometry.getPoseMeters().getRotation().getRadians(), sample.heading)
-    ), odometry.getPoseMeters().getRotation()
-    );
-    driveRobotRelative(speeds);
 }
 }
