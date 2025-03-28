@@ -37,5 +37,7 @@ public interface IntakeIO {
     public default void updateTunableNumbers() {}
 
     public default void zeroSensor(){}
+    
+    public default void resetMotionMagicConfigs(boolean up){}
 
 }

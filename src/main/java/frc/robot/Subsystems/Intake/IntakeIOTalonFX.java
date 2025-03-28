@@ -2,6 +2,7 @@ package frc.robot.Subsystems.Intake;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
@@ -46,13 +47,13 @@ public class IntakeIOTalonFX implements IntakeIO {
     private double pivotSetpointVolts;
     private double rollerSetpointVolts;
 
-    LoggedTunableNumber kP = new LoggedTunableNumber("Pivot/kP", 0);
+    LoggedTunableNumber kP = new LoggedTunableNumber("Pivot/kP", 9);
     LoggedTunableNumber kD = new LoggedTunableNumber("Pivot/kD", 0);
-    LoggedTunableNumber kS = new LoggedTunableNumber("Pivot/kS", 0);
-    LoggedTunableNumber kV = new LoggedTunableNumber("Pivot/kV", 0);
-    LoggedTunableNumber kG = new LoggedTunableNumber("Pivot/kG",0); 
-    LoggedTunableNumber kMotionCruiseVelocity = new LoggedTunableNumber( "Pivot/kMotionCruiseVelocity",10);
-    LoggedTunableNumber kMotionAcceleration = new LoggedTunableNumber( "Pivot/kMotionAcceleration",20);
+    LoggedTunableNumber kS = new LoggedTunableNumber("Pivot/kS", 1.16073);
+    LoggedTunableNumber kV = new LoggedTunableNumber("Pivot/kV", 0.225662);
+    LoggedTunableNumber kG = new LoggedTunableNumber("Pivot/kG",0.32635); 
+    LoggedTunableNumber kMotionCruiseVelocity = new LoggedTunableNumber( "Pivot/kMotionCruiseVelocity",60);
+    LoggedTunableNumber kMotionAcceleration = new LoggedTunableNumber( "Pivot/kMotionAcceleration",120);
     LoggedTunableNumber kMotionJerk = new LoggedTunableNumber("Pivot/kMotionJerk",10000);
 
     public IntakeIOTalonFX(){
@@ -91,6 +92,8 @@ public class IntakeIOTalonFX implements IntakeIO {
         rollerConfigs.MotorOutput.Inverted = intakeConstants.rollerInvert;
 
         rollerMotor.getConfigurator().apply(rollerConfigs);
+
+        pivotConfiguration();
         
         /* Set Frequency */
         BaseStatusSignal.setUpdateFrequencyForAll(
@@ -202,6 +205,20 @@ public class IntakeIOTalonFX implements IntakeIO {
         pivotMotor.setPosition(0);
 
         pivotMotor.getConfigurator().apply(pivotConfigs);
+    }
+
+    public void resetMotionMagicConfigs(boolean up){
+        MotionMagicConfigs configs  = new MotionMagicConfigs();
+        if(up){
+            configs.MotionMagicCruiseVelocity = 7;
+            configs.MotionMagicAcceleration = 15;
+            configs.MotionMagicJerk = 5000;
+        }else{
+            configs.MotionMagicCruiseVelocity = kMotionCruiseVelocity.get();;
+            configs.MotionMagicAcceleration = kMotionAcceleration.get();;
+           configs.MotionMagicJerk = kMotionJerk.get();
+        }
+        pivotMotor.getConfigurator().apply(configs);
     }
 
 }

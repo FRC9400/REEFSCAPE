@@ -12,65 +12,125 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
-public class Intake extends SubsystemBase{
+public class Intake{
     private final IntakeIO intakeIO;
     private IntakeIOInputsAutoLogged inputs = new IntakeIOInputsAutoLogged();
-    private final SysIdRoutine pivotSysID;
+    private IntakeStates intakeState = IntakeStates.IDLE;
+    private double pivotSetpoint = 0;
+   private double rollerSetpoint = 0;
+ 
+ enum IntakeStates{
+        IDLE,
+        INTAKE,
+        UP,
+        SETPOINT,
+        SCORE
+    }
 
     public Intake(IntakeIO intakeIO){
         this.intakeIO = intakeIO;
-        pivotSysID = new SysIdRoutine(
-                new SysIdRoutine.Config(null, Volts.of(3), null,
-                        (state) -> SignalLogger.writeString("state", state.toString())),
-                new SysIdRoutine.Mechanism((volts) -> intakeIO.requestPivotVoltage(volts.in(Volts)), null,
-                        this));
     }
 
-    public Command runSysIdCmd() {
-        return Commands.sequence(
-                this.runOnce(() -> SignalLogger.start()),
-                pivotSysID
-                        .quasistatic(Direction.kForward)
-                        .until(() -> Math.abs(inputs.pivotPositionDeg) > 110),
-                this.runOnce(() -> intakeIO.requestPivotVoltage(0)),
-                Commands.waitSeconds(1),
-                pivotSysID
-                        .quasistatic(Direction.kReverse)
-                        .until(() -> inputs.pivotPositionDeg < 5),
-                this.runOnce(() -> intakeIO.requestPivotVoltage(0)),
-                Commands.waitSeconds(1),
-
-                pivotSysID
-                        .dynamic(Direction.kForward)
-                        .until(() -> Math.abs(inputs.pivotPositionDeg) > 110),
-                this.runOnce(() -> intakeIO.requestPivotVoltage(0)),
-                Commands.waitSeconds(1),
-
-                pivotSysID
-                        .dynamic(Direction.kReverse)
-                        .until(() -> inputs.pivotPositionDeg < 5),
-                this.runOnce(() -> intakeIO.requestPivotVoltage(0)),
-                Commands.waitSeconds(1),
-                this.runOnce(() -> SignalLogger.stop()));
-    }
-
-    public void requestMotionMagic(double degrees){
-        intakeIO.requestMotionMagic(degrees);
-    }
-
-    public void requestPivotVoltage(double volts){
-        intakeIO.requestPivotVoltage(volts);
-    }
-
-    public void requestRollerVoltage(double volts){
-        intakeIO.requestRollerVoltage(volts);
-    }
-
-    @Override
-    public void periodic(){
+    public void Loop(){
         intakeIO.updateTunableNumbers();
         intakeIO.updateInputs(inputs);
         Logger.processInputs("Intake", inputs);
+        Logger.recordOutput("IntakeState", intakeState);
+
+        switch(intakeState){
+            case IDLE:
+            intakeIO.resetMotionMagicConfigs(false);
+                intakeIO.requestPivotVoltage(0);
+                intakeIO.requestRollerVoltage(0);
+                break;
+            case SETPOINT:
+            intakeIO.resetMotionMagicConfigs(false);
+                intakeIO.requestMotionMagic(pivotSetpoint);
+                intakeIO.requestRollerVoltage(0);
+                break;
+            case INTAKE:
+            
+                intakeIO.requestMotionMagic(pivotSetpoint);
+                intakeIO.requestRollerVoltage(rollerSetpoint);
+                break;
+            case UP:
+            intakeIO.resetMotionMagicConfigs(true);
+            intakeIO.requestMotionMagic(pivotSetpoint);
+            intakeIO.requestRollerVoltage(rollerSetpoint);
+            case SCORE:
+            intakeIO.resetMotionMagicConfigs(false);
+                intakeIO.requestMotionMagic(pivotSetpoint);
+                intakeIO.requestRollerVoltage(rollerSetpoint);
+                break;
+            default:
+                break;
+                
+        }
+    }
+
+    
+    public void requestIdle(){
+        setState(IntakeStates.IDLE);
+    }
+
+    public void requestSetpoint(double degrees){
+        pivotSetpoint = degrees;
+        setState(IntakeStates.SETPOINT);
+    }
+
+    public void requestIntakeCoral(){
+        pivotSetpoint = 135;
+        rollerSetpoint = 3;
+        setState(IntakeStates.INTAKE);
+    }
+
+    public void requestUp(){
+        rollerSetpoint = 5;
+        setState(IntakeStates.UP);
+    }
+
+    public void requestIntakeAlgae(){
+        intakeIO.resetMotionMagicConfigs(false);
+        pivotSetpoint = 60;
+        rollerSetpoint = -3;
+        setState(IntakeStates.INTAKE);
+    }
+
+    public void requestScoreCoral(){
+        pivotSetpoint = 25;
+        rollerSetpoint = -3;
+        setState(IntakeStates.SCORE);
+    }
+
+    public void requestPrcoessAlgae(){
+        pivotSetpoint = 40;
+        rollerSetpoint = 3;
+        setState(IntakeStates.SCORE);
+    }
+
+    public void requestHoldCoral(){
+        pivotSetpoint = 0;
+        rollerSetpoint = 3;
+        setState(IntakeStates.INTAKE);
+    }
+
+    public void requestHoldAlgae(){
+        intakeIO.resetMotionMagicConfigs(true);
+        pivotSetpoint = 33;
+        rollerSetpoint = -2;
+        setState(IntakeStates.INTAKE);
+    }
+
+    public void setState(IntakeStates nextState){
+        this.intakeState = nextState;
+    }
+
+    public double getRollerCurrent(){
+        return inputs.rollerCurrentAmps;
+    }
+
+    public IntakeStates getIntakeState(){
+        return this.intakeState;
     }
 
 
