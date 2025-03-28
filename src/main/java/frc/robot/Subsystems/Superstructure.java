@@ -145,7 +145,7 @@ public class Superstructure extends SubsystemBase {
                 s_dealgae.requestIdle();
                 s_elevator.requestIdle();
                 s_funnel.requestIntake(0.75);
-                s_endeffector.requestIntake(2);
+                s_endeffector.requestIntake(1.5);
                 if (hasCoral == true){
                     s_intake.requestHoldCoral();
                 } else if (hasAlgae == true){
@@ -227,7 +227,11 @@ public class Superstructure extends SubsystemBase {
                 led.requestScoringLED();
                 s_dealgae.requestIdle();
                 s_elevator.requestHold();
-                s_endeffector.requestScore(3);
+                if(s_elevator.selectedHeight == "L4"){
+                    s_endeffector.requestScore(2);
+                }
+                else{
+                s_endeffector.requestScore(3);}
                 if (hasCoral == true){
                     s_intake.requestHoldCoral();
                 } else if (hasAlgae == true){
