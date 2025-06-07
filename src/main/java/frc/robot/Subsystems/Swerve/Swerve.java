@@ -35,6 +35,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -47,6 +48,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.commons.Conversions;
+import frc.commons.LoggedTunableNumber;
+import frc.robot.LimelightHelpers;
 import frc.robot.Constants.canIDConstants;
 import frc.robot.Constants.swerveConstants;
 import frc.robot.Constants.swerveConstants.kinematicsConstants;
@@ -70,7 +73,6 @@ import frc.robot.autons.AutoConstants;
  */
 
 public class Swerve extends SubsystemBase{
-    SwerveDrivePoseEstimator poseEstimator;
     ProfiledPIDController controller = new ProfiledPIDController(0, 0, 0, null); //create pose constants
     Matrix<N3, N1> visionSTDevs = VecBuilder.fill(0, 0,0); //
     Matrix<N3, N1> stateSTDevs = VecBuilder.fill(0, 0, 0); // how to tune how to tune
@@ -83,6 +85,22 @@ public class Swerve extends SubsystemBase{
     Pigeon2 pigeon = new Pigeon2(canIDConstants.pigeon, "canivore");
     private StatusSignal<Angle> m_heading = pigeon.getYaw();
     private StatusSignal<AngularVelocity> m_angularVelocity = pigeon.getAngularVelocityZDevice();
+
+    public PIDController xController;
+    public PIDController yController;
+    public PIDController thetaController;
+    
+    LoggedTunableNumber xkP = new LoggedTunableNumber("Choreo/xkP", 0.77);
+    LoggedTunableNumber xkI = new LoggedTunableNumber("Choreo/xkI", 0.00);
+    LoggedTunableNumber xkD = new LoggedTunableNumber("Choreo/xkD", 0.01);
+    
+    LoggedTunableNumber ykP = new LoggedTunableNumber("Choreo/ykP", 0.2);
+    LoggedTunableNumber ykI = new LoggedTunableNumber("Choreo/ykI", 0);
+    LoggedTunableNumber ykD = new LoggedTunableNumber("Choreo/ykD", 0);
+
+    LoggedTunableNumber thetakP = new LoggedTunableNumber("Choreo/thetakP", 13.25);
+    LoggedTunableNumber thetakI = new LoggedTunableNumber("Choreo/thetakI", 0);
+    LoggedTunableNumber thetakD = new LoggedTunableNumber("Choreo/thetakD", 0.09);
 
     public final ModuleIOTalonFX[] Modules = new ModuleIOTalonFX[4];
     private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(kinematicsConstants.FL, kinematicsConstants.FR, kinematicsConstants.BL,
@@ -100,7 +118,7 @@ public class Swerve extends SubsystemBase{
     public Rotation2d heading = new Rotation2d();
     public int SuccessfulDaqs = 0;
     public int FailedDaqs = 0;
-    private SwerveDriveOdometry odometry;
+    SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(kinematics, heading, currentModulePositions, new Pose2d());//add actual std devs later
 
     private final SysIdRoutine driveRoutine = new SysIdRoutine(new SysIdRoutine.Config(
         null, 
@@ -195,7 +213,16 @@ public class Swerve extends SubsystemBase{
                   heading =
                   new Rotation2d(BaseStatusSignal.getLatencyCompensatedValue(m_heading, m_angularVelocity).magnitude() * Math.PI/180.0);
 
-                  odometry.update(heading, currentModulePositions); //update odoemtry threa
+                  poseEstimator.update(heading, currentModulePositions);
+                  //i actually don't know what limelightName should be
+                  LimelightHelpers.SetRobotOrientation("limelight", poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
+                  LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
+                  if(mt2.tagCount != 0){
+                    poseEstimator.setVisionMeasurementStdDevs(VecBuilder.fill(0.7, 0.7, 9999999));//placeholder values
+                    poseEstimator.addVisionMeasurement(mt2.pose, mt2.timestampSeconds);
+                  }
+
+                  //odometry.update(heading, currentModulePositions); //update odoemtry threa
                   rawQuestPose = new Pose2d(questNav.getPose().getTranslation(), questNav.getPose().getRotation().unaryMinus());
                   transformedQuestPose = transformQuestPose(new Transform2d(initialPose.getTranslation(), initialPose.getRotation()));
                   poseEstimator.update(heading, currentModulePositions);
@@ -243,10 +270,11 @@ public Swerve() {
 
     m_OdometryThread = new OdometryThread();
     m_OdometryThread.start();
-    odometry = new SwerveDriveOdometry(kinematics, pigeon.getRotation2d(),
-        currentModulePositions); 
     poseEstimator = new SwerveDrivePoseEstimator(kinematics, heading, currentModulePositions, initialPose);
 
+    xController = new PIDController(xkP.get(), xkI.get(), xkD.get());
+    yController = new PIDController(ykP.get(), ykI.get(), ykD.get());
+    thetaController = new PIDController(thetakP.get(), thetakI.get(), thetakD.get());
   }
 
 
@@ -267,7 +295,6 @@ public void periodic(){
     Logger.recordOutput("InitialPose", initialPose);
     Logger.recordOutput("TransformedOculusPosituion", transformedQuestPose);
     Logger.recordOutput("RawOculusPosituion", rawQuestPose);
-    Logger.recordOutput("Odometry/PoseRaw", odometry.getPoseMeters());
     Logger.recordOutput("Swerve/SuccessfulDaqs", SuccessfulDaqs);
     Logger.recordOutput("Swerve/FailedDaqs", FailedDaqs);
 
@@ -329,7 +356,7 @@ public void resetPoseEstimator(Pose2d pose){
 }
 
 public void resetPose(Pose2d pose){
-    odometry.resetPosition(heading, currentModulePositions, pose);
+    poseEstimator.resetPosition(heading, currentModulePositions, pose);
 }
 
 public void resetOdometry(Pose2d pose){
@@ -433,9 +460,9 @@ private void logModuleStates(String key, SwerveModuleState[] states) {
 
 public void followChoreoTraj(SwerveSample sample) {
     ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(new ChassisSpeeds(
-        sample.vx + AutoConstants.xController.calculate(poseRaw.getX(), sample.x),
-        sample.vy + AutoConstants.yController.calculate(poseRaw.getY(), sample.y),
-        sample.omega + AutoConstants.headingController.calculate(poseRaw.getRotation().getRadians(), sample.heading)
+        sample.vx + xController.calculate(poseRaw.getX(), sample.x),
+        sample.vy + yController.calculate(poseRaw.getY(), sample.y),
+        sample.omega + thetaController.calculate(poseRaw.getRotation().getRadians(), sample.heading)
     ), poseRaw.getRotation()
     );
     driveRobotRelative(speeds);
